@@ -1,0 +1,38 @@
+        ' SQL 查询和操作
+        Dim selectQuery As String = "SELECT COUNT(*) FROM your_table WHERE your_condition_column = @Condition"
+        Dim updateQuery As String = "UPDATE your_table SET your_update_column = @UpdateValue WHERE your_condition_column = @Condition"
+        Dim insertQuery As String = "INSERT INTO your_table (your_condition_column, your_update_column) VALUES (@Condition, @InsertValue)"
+
+        Using connection As New SqlConnection(connectionString)
+            connection.Open()
+
+            ' 检查是否存在符合条件的数据
+            Dim recordExists As Boolean
+            Using selectCommand As New SqlCommand(selectQuery, connection)
+                selectCommand.Parameters.AddWithValue("@Condition", conditionValue)
+                recordExists = CInt(selectCommand.ExecuteScalar()) > 0
+            End Using
+
+            ' 执行更新或插入操作
+            If recordExists Then
+                ' 更新操作
+                Using updateCommand As New SqlCommand(updateQuery, connection)
+                    updateCommand.Parameters.AddWithValue("@Condition", conditionValue)
+                    updateCommand.Parameters.AddWithValue("@UpdateValue", updateValue)
+                    updateCommand.ExecuteNonQuery()
+                End Using
+                Console.WriteLine("记录已更新。")
+            Else
+                ' 插入操作
+                Using insertCommand As New SqlCommand(insertQuery, connection)
+                    insertCommand.Parameters.AddWithValue("@Condition", conditionValue)
+                    insertCommand.Parameters.AddWithValue("@InsertValue", insertValue)
+                    insertCommand.ExecuteNonQuery()
+                End Using
+                Console.WriteLine("记录已插入。")
+            End If
+        End Using
+
+        Console.WriteLine("操作完成。")
+    End Sub
+End Module
