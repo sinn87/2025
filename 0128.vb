@@ -75,3 +75,32 @@ Public Class Form1
         End Try
     End Sub
 End Class
+
+
+
+
+
+Private Sub Button_Click(sender As Object, e As EventArgs) Handles Button.Click
+    Dim allChecked As Boolean = True ' 全ての項目がチェックされていると仮定する
+
+    ' DataGridView のすべての行をループする
+    For Each row As DataGridViewRow In dataGridView.Rows
+        ' チェックボックス列のチェック状態を確認
+        If Convert.ToBoolean(row.Cells("CheckColumn").Value) = False Then
+            allChecked = False ' チェックが外れている項目があれば、allChecked を False に設定
+            Exit For ' チェックが外れている項目が見つかった時点でループを抜ける
+        End If
+    Next
+
+    If allChecked Then
+        ' すべての項目がチェックされている場合、確認メッセージを表示
+        Dim result As DialogResult = MessageBox.Show("已确认需要审查的项目全都审查结束，确定出力资料吗？", "確認", MessageBoxButtons.YesNo)
+        If result = DialogResult.Yes Then
+            ' ユーザーが「Yes」を選択した場合、相応の操作を実行
+            ' ここに必要な処理を追加してください
+        End If
+    Else
+        ' チェックが外れている項目がある場合、警告メッセージを表示
+        MessageBox.Show("还有没审查的项目，请确认。", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+    End If
+End Sub
