@@ -1,18 +1,65 @@
-SELECT T1.*
-FROM T100 AS T1
-INNER JOIN (
-    SELECT DISTINCT M3.项目ID
-    FROM M320 AS M3
-    INNER JOIN (
-        SELECT M3.账票ID, M3.募集区分ID
-        FROM M300 AS M3
-        WHERE M3.账票名 = '明星片'
-    ) AS M3_filtered
-    ON M3.账票ID = M3_filtered.账票ID
-    AND M3.募集区分ID = M3_filtered.募集区分ID
-) AS M3_final
-ON T1.项目ID = M3_final.项目ID
-WHERE T1.案件ID = '200501001';
+Imports Microsoft.Office.Interop.Excel
+
+Public Class ExcelHelper
+    ' Excelを開いてシートを取得する
+    ' path: Excelファイルのパス
+    Public Shared Sub WriteToExcel(ByVal path As String)
+        ' Excelアプリケーションを作成
+        Dim excelApp As New Application()
+        Dim workbook As Workbook = Nothing
+        Dim worksheet As Worksheet = Nothing
+
+        Try
+            ' Excelファイルを開く
+            workbook = excelApp.Workbooks.Open(path)
+            worksheet = CType(workbook.Sheets(1), Worksheet)
+
+            ' A2セルに "Hello" を書き込む
+            worksheet.Cells(2, 1).Value = "Hello"
+
+            ' 保存して閉じる
+            workbook.Save()
+            workbook.Close()
+
+        Catch ex As Exception
+            ' エラーハンドリング
+            MsgBox("Excel処理中にエラーが発生しました: " & ex.Message)
+        Finally
+            ' Excelオブジェクトを解放
+            If worksheet IsNot Nothing Then ReleaseObject(worksheet)
+            If workbook IsNot Nothing Then ReleaseObject(workbook)
+            If excelApp IsNot Nothing Then
+                excelApp.Quit()
+                ReleaseObject(excelApp)
+            End If
+        End Try
+    End Sub
+
+    ' COMオブジェクトを解放する
+    Private Shared Sub ReleaseObject(ByVal obj As Object)
+        Try
+            If obj IsNot Nothing Then
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(obj)
+                obj = Nothing
+            End If
+        Catch ex As Exception
+            obj = Nothing
+        Finally
+            GC.Collect()
+        End Try
+    End Sub
+End Class
+
+
+
+
+
+
+
+
+
+
+
 
             
             Imports System.Data.SqlClient
