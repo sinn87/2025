@@ -1,4 +1,21 @@
-Imports System.Data.SqlClient
+SELECT T1.*
+FROM T100 AS T1
+INNER JOIN (
+    SELECT DISTINCT M3.项目ID
+    FROM M320 AS M3
+    INNER JOIN (
+        SELECT M3.账票ID, M3.募集区分ID
+        FROM M300 AS M3
+        WHERE M3.账票名 = '明星片'
+    ) AS M3_filtered
+    ON M3.账票ID = M3_filtered.账票ID
+    AND M3.募集区分ID = M3_filtered.募集区分ID
+) AS M3_final
+ON T1.项目ID = M3_final.项目ID
+WHERE T1.案件ID = '200501001';
+
+            
+            Imports System.Data.SqlClient
 
 Public Class Form1
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
