@@ -38,10 +38,11 @@ Declare PtrSafe Function SetWindowPos Lib "user32" ( _
     ByVal cx As Long, ByVal cy As Long, _
     ByVal uFlags As Long) As Long
 
-Const HWND_TOPMOST = -1
-Const SWP_NOMOVE = &H2
-Const SWP_NOSIZE = &H1
-Const SWP_SHOWWINDOW = &H40
+Const HWND_TOPMOST = -1        ' 最前面に固定
+Const HWND_NOTOPMOST = -2      ' 最前面の固定を解除
+Const SWP_NOMOVE = &H2         ' 位置変更なし
+Const SWP_NOSIZE = &H1         ' サイズ変更なし
+Const SWP_SHOWWINDOW = &H40    ' ウィンドウを表示
 
 Sub ShowPrintPreview_B()
     ' ① b.xltm の印刷プレビューを開く
@@ -56,7 +57,7 @@ Sub ShowPrintPreview_B()
         Application.Wait Now + TimeValue("00:00:0.1")
     Next i
     
-    ' ③ b.xltm の印刷プレビューを最前面に表示
+    ' ③ 印刷プレビューを最前面に表示
     If hWndPreview <> 0 Then
         SetWindowPos hWndPreview, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE Or SWP_SHOWWINDOW
     End If
@@ -64,9 +65,15 @@ Sub ShowPrintPreview_B()
     ' ④ 5 秒待機
     Application.Wait Now + TimeValue("00:00:5")
     
-    ' ⑤ a.xltm のマクロを実行し、MsgBox を表示
+    ' ⑤ 印刷プレビューの最前面固定を解除
+    If hWndPreview <> 0 Then
+        SetWindowPos hWndPreview, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE Or SWP_SHOWWINDOW
+    End If
+
+    ' ⑥ a.xltm のマクロを実行し、MsgBox を表示
     Call Application.Run("a.xltm!ShowSaveMessage_A")
 End Sub
+
 
 
 Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" ( _
