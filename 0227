@@ -1,0 +1,72 @@
+Public 保存B As Boolean ' 全局变量，控制是否保存
+
+Sub 打开B并等待打印预览()
+    Dim wbA As Workbook
+    Dim startTime As Double
+    Dim printPreviewOpened As Boolean
+    
+    ' Aファイルを取得
+    Set wbA = ThisWorkbook
+    
+    ' Bファイルを開く
+    Set wbB = Workbooks.Open("C:\路径\b.xltm")
+
+    ' Bをアクティブにする
+    wbB.Activate
+    
+    ' 印刷プレビューを表示
+    Application.ScreenUpdating = False ' 画面更新を一時停止
+    ActiveSheet.PrintPreview
+    Application.ScreenUpdating = True ' 画面更新を再開
+    
+    ' 印刷プレビューが完全に開くまで待機（最大10秒）
+    startTime = Timer
+    Do
+        DoEvents ' ExcelのUI処理を許可し、フリーズを防ぐ
+        If ActiveWindow.View = xlPageBreakPreview Or ActiveWindow.View = xlPageLayoutView Then
+            printPreviewOpened = True
+            Exit Do ' 条件が満たされたらループを抜ける
+        End If
+        If Timer - startTime > 10 Then Exit Do
+    Loop
+    
+    ' 5秒後に保存確認のMsgBoxを表示（OnTimeを使用）
+    Application.OnTime Now + TimeValue("00:00:05"), "弹出保存询问"
+    
+    ' ここで処理を待つ（OnTimeが別スレッドなので）
+    Do
+        DoEvents ' これによりExcelの動作がフリーズしない
+        If 保存B <> False Then Exit Do ' 変数が更新されるまでループ
+    Loop
+    
+    ' ユーザーが「No」を選んだ場合、exitskip に移動
+    If 保存B = False Then
+        GoTo exitskip
+    End If
+
+    ' 必要な場合はここに続きの処理を書く
+    MsgBox "B.xltmの処理が完了しました！", vbInformation, "完了"
+
+exitskip:
+    ' 終了処理
+    MsgBox "主程序回到 exitskip 位置", vbInformation, "流程结束"
+End Sub
+
+Sub 弹出保存询问()
+    Dim response As VbMsgBoxResult
+    
+    ' ユーザーに「B.xltmの印刷プレビューを保存しますか？」を確認
+    response = MsgBox("是否保存 B.xltm 的打印预览？", vbYesNo + vbQuestion, "打印预览保存")
+
+    ' 选择"是"，则保存
+    If response = vbYes Then
+        wbB.Save
+        保存B = True
+    Else
+        保存B = False
+    End If
+    
+    ' 关闭 B.xltm
+    wbB.Close SaveChanges:=False
+    Set wbB = Nothing
+End Sub
