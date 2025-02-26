@@ -1,3 +1,27 @@
+Sub SetPrintToA4()
+    Dim ws As Worksheet
+    
+    ' すべてのシートをループ処理
+    For Each ws In ActiveWorkbook.Sheets
+        With ws.PageSetup
+            .PaperSize = xlPaperA4   ' 用紙サイズを A4 に設定
+            .Orientation = xlPortrait ' 縦向き印刷 (横向きにする場合は xlLandscape に変更)
+            .Zoom = False             ' デフォルトのズームを無効化
+            .FitToPagesWide = 1       ' 横方向を 1 ページに収める
+            .FitToPagesTall = 1       ' 縦方向を 1 ページに収める
+            .CenterHorizontally = True ' 水平方向に中央揃え
+            .CenterVertically = True   ' 垂直方向に中央揃え
+        End With
+    Next ws
+    
+    ' 印刷プレビューを表示
+    ActiveWindow.SelectedSheets.PrintPreview
+End Sub
+
+
+
+
+
 Sub PreviewMultipleSheets()
     Dim ws As Worksheet
     Dim arrSheets() As String
