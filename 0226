@@ -1,0 +1,16 @@
+Sub PreviewMultipleSheets()
+    Dim ws As Worksheet
+    Dim arrSheets() As String
+    Dim i As Integer
+    
+    ' 选中所有工作表
+    i = 0
+    For Each ws In ActiveWorkbook.Sheets
+        ReDim Preserve arrSheets(i)
+        arrSheets(i) = ws.Name
+        i = i + 1
+    Next ws
+    
+    ' 预览选中的工作表
+    Sheets(arrSheets).PrintPreview
+End Sub
