@@ -1,3 +1,55 @@
+Sub 打开B并等待打印预览()
+    Dim wbA As Workbook
+    Dim wbB As Workbook
+    Dim printPreviewOpened As Boolean
+    Dim startTime As Double
+    
+    ' Aファイルを取得
+    Set wbA = ThisWorkbook
+    
+    ' Bファイルを開く
+    Set wbB = Workbooks.Open("C:\路径\b.xltm")
+
+    ' Bをアクティブにし、現在のウィンドウにする
+    wbB.Activate
+    
+    ' 印刷プレビューを表示
+    Application.ScreenUpdating = False ' 画面更新を一時停止（安定性向上のため）
+    ActiveSheet.PrintPreview
+    Application.ScreenUpdating = True ' 画面更新を再開
+    
+    ' 印刷プレビューが完全に開くまで待機（最大10秒）
+    startTime = Timer
+    Do
+        DoEvents ' ExcelのUI処理を許可し、フリーズを防ぐ
+        ' 現在のウィンドウが印刷プレビューの表示モードになったか確認
+        If ActiveWindow.View = xlPageBreakPreview Or ActiveWindow.View = xlPageLayoutView Then
+            printPreviewOpened = True
+            Exit Do ' 条件が満たされたらループを抜ける
+        End If
+        ' 10秒を超えた場合はループを強制終了（無限ループ防止）
+        If Timer - startTime > 10 Then Exit Do
+    Loop
+    
+    ' 5秒後に保存確認のMsgBoxを表示
+    Application.OnTime Now + TimeValue("00:00:05"), "弹出保存询问"
+End Sub
+
+Sub 弹出保存询问()
+    Dim response As VbMsgBoxResult
+    ' ユーザーに「B.xltmの印刷プレビューを保存しますか？」を確認
+    response = MsgBox("是否保存 B.xltm 的打印预览？", vbYesNo + vbQuestion, "打印预览保存")
+    
+    ' 「はい」を選択した場合、ファイルを保存
+    If response = vbYes Then
+        ActiveWorkbook.Save
+    End If
+End Sub
+
+
+
+
+
 Sub SetPrintToA4()
     Dim ws As Worksheet
     
