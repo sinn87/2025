@@ -12,3 +12,5 @@ Public Class Form1
         End Using
     End Sub
 End Class
+
+https://github.com/manusoft/MControls/blob/master/MControls/MTabControl.vb
