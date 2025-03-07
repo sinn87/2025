@@ -1,0 +1,26 @@
+Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    AdjustFormSize()
+End Sub
+
+
+
+Private Sub TabControl1_SelectedIndexChanged(sender As Object, e As EventArgs) Handles TabControl1.SelectedIndexChanged
+    AdjustFormSize()
+End Sub
+
+
+Private Sub AdjustFormSize()
+    ' 获取当前选中的 TabPage
+    Dim selectedTab As TabPage = TabControl1.SelectedTab
+    If selectedTab IsNot Nothing Then
+        ' 获取 TabPage 的大小
+        Dim newSize As Size = selectedTab.Size
+        
+        ' 计算 Form1 的新大小（加上 TabControl 的边框、标题栏等）
+        Dim widthOffset As Integer = Me.Width - TabControl1.Width
+        Dim heightOffset As Integer = Me.Height - TabControl1.Height
+
+        ' 设置 Form1 大小，确保 TabPage 完全可见
+        Me.Size = New Size(newSize.Width + widthOffset, newSize.Height + heightOffset)
+    End If
+End Sub
