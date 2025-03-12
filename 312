@@ -1,0 +1,14 @@
+Private Sub TextBox_Paint(sender As Object, e As PaintEventArgs)
+    Dim g As Graphics = e.Graphics
+    Dim textBox As TextBox = CType(sender, TextBox)
+    Dim text As String = textBox.Text
+    Dim font As Font = textBox.Font
+    Dim brush As New SolidBrush(textBox.ForeColor)
+    Dim format As New StringFormat()
+
+    format.Alignment = StringAlignment.Near  ' 水平左对齐
+    format.LineAlignment = StringAlignment.Center  ' 垂直居中
+
+    Dim rect As Rectangle = New Rectangle(0, 0, textBox.Width, textBox.Height)
+    g.DrawString(text, font, brush, rect, format)
+End Sub
