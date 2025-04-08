@@ -1,0 +1,28 @@
+CREATE TABLE Users (
+  UserID AUTOINCREMENT PRIMARY KEY,
+  UserName TEXT
+);
+
+CREATE TABLE Roles (
+  RoleID AUTOINCREMENT PRIMARY KEY,
+  RoleName TEXT
+);
+
+CREATE TABLE Permissions (
+  PermissionID AUTOINCREMENT PRIMARY KEY,
+  PermissionName TEXT
+);
+
+CREATE TABLE UserRoles (
+  UserID LONG,
+  RoleID LONG,
+  FOREIGN KEY (UserID) REFERENCES Users(UserID),
+  FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)
+);
+
+CREATE TABLE RolePermissions (
+  RoleID LONG,
+  PermissionID LONG,
+  FOREIGN KEY (RoleID) REFERENCES Roles(RoleID),
+  FOREIGN KEY (PermissionID) REFERENCES Permissions(PermissionID)
+);
