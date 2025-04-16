@@ -1,0 +1,106 @@
+Public Module ControlBindingHelper
+
+    ' 将 Dictionary 的值填入控件
+    Public Sub FillControlsFromDictionary(parent As Control, data As Dictionary(Of String, Object))
+        For Each ctrl As Control In parent.Controls
+            If ctrl.Tag IsNot Nothing Then
+                Dim key As String = ctrl.Tag.ToString()
+                If data.ContainsKey(key) Then
+                    Dim value = data(key)
+                    Select Case True
+                        Case TypeOf ctrl Is TextBox
+                            CType(ctrl, TextBox).Text = value.ToString()
+                        Case TypeOf ctrl Is ComboBox
+                            CType(ctrl, ComboBox).SelectedItem = value
+                        Case TypeOf ctrl Is CheckBox
+                            CType(ctrl, CheckBox).Checked = Convert.ToBoolean(value)
+                        Case TypeOf ctrl Is DateTimePicker
+                            CType(ctrl, DateTimePicker).Value = Convert.ToDateTime(value)
+                    End Select
+                End If
+            End If
+            ' 递归：处理容器控件（如Panel, GroupBox, TabPage）
+            If ctrl.HasChildren Then
+                FillControlsFromDictionary(ctrl, data)
+            End If
+        Next
+    End Sub
+
+    ' 将控件的值采集为 Dictionary
+    Public Function CollectDataToDictionary(parent As Control) As Dictionary(Of String, Object)
+        Dim result As New Dictionary(Of String, Object)
+        For Each ctrl As Control In parent.Controls
+            If ctrl.Tag IsNot Nothing Then
+                Dim key As String = ctrl.Tag.ToString()
+                Select Case True
+                    Case TypeOf ctrl Is TextBox
+                        result(key) = CType(ctrl, TextBox).Text
+                    Case TypeOf ctrl Is ComboBox
+                        result(key) = CType(ctrl, ComboBox).SelectedItem
+                    Case TypeOf ctrl Is CheckBox
+                        result(key) = CType(ctrl, CheckBox).Checked
+                    Case TypeOf ctrl Is DateTimePicker
+                        result(key) = CType(ctrl, DateTimePicker).Value
+                End Select
+            End If
+            If ctrl.HasChildren Then
+                For Each kv In CollectDataToDictionary(ctrl)
+                    If Not result.ContainsKey(kv.Key) Then
+                        result.Add(kv.Key, kv.Value)
+                    End If
+                Next
+            End If
+        Next
+        Return result
+    End Function
+
+End Module
+
+
+
+' 收集多个 TabPage 的数据：返回 Dictionary(Of String, Dictionary(Of String, Object))
+Public Function CollectAllTabPages(tabControl As TabControl) As Dictionary(Of String, Dictionary(Of String, Object))
+    Dim allData As New Dictionary(Of String, Dictionary(Of String, Object))
+    For Each page As TabPage In tabControl.TabPages
+        Dim pageData = CollectDataToDictionary(page)
+        allData(page.Name) = pageData ' 用页面的 Name 作为 key
+    Next
+    Return allData
+End Function
+
+
+收集当前页数据
+Dim currentData = ControlBindingHelper.CollectDataToDictionary(Me.TabControl1.SelectedTab)
+' 保存当前页
+SaveToDatabase("CurrentPage", currentData)
+
+--------------------------
+
+收集所有页的数据
+Dim allPagesData = ControlBindingHelper.CollectAllTabPages(Me.TabControl1)
+
+' 遍历所有页面的数据
+For Each kv In allPagesData
+    Dim pageName As String = kv.Key
+    Dim pageData As Dictionary(Of String, Object) = kv.Value
+
+    ' 保存每页数据（你可以按需保存数据库中不同的表）
+    SaveToDatabase(pageName, pageData)
+Next
+
+
+简洁的保存按钮逻辑
+' 保存当前页
+Private Sub btnSaveCurrent_Click(sender As Object, e As EventArgs) Handles btnSaveCurrent.Click
+    Dim data = ControlBindingHelper.CollectDataToDictionary(TabControl1.SelectedTab)
+    SaveToDatabase("SinglePage", data)
+End Sub
+
+' 保存所有页
+Private Sub btnSaveAll_Click(sender As Object, e As EventArgs) Handles btnSaveAll.Click
+    Dim allData = ControlBindingHelper.CollectAllTabPages(TabControl1)
+    For Each kv In allData
+        SaveToDatabase(kv.Key, kv.Value)
+    Next
+End Sub
+
