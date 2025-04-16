@@ -1,3 +1,147 @@
+
+Public Sub SavePage(mode As EntryMode, tabControls As List(Of Control), Optional originalDict As Dictionary(Of String, DetailItem) = Nothing)
+    Dim formDict As New Dictionary(Of String, DetailItem)
+
+    ' 1. 遍历控件 → 提取值
+    For Each ctrl In tabControls
+        Dim bid As String = TryCast(ctrl.Tag, String)
+        If String.IsNullOrEmpty(bid) Then Continue For
+
+        Dim value As String = GetControlValue(ctrl)
+
+        If mode = EntryMode.CreateNew Then
+            ' 所有控件都插入
+            formDict(bid) = New DetailItem With {
+                .BID = bid,
+                .Value = value,
+                .Status = "新建"
+            }
+
+        ElseIf mode = EntryMode.Edit Then
+            ' 仅更新变更控件
+            If Not originalDict.ContainsKey(bid) OrElse originalDict(bid).Value <> value Then
+                formDict(bid) = New DetailItem With {
+                    .BID = bid,
+                    .Value = value,
+                    .Status = "更新"
+                }
+            End If
+        End If
+    Next
+
+    ' 2. 保存数据库（根据 mode）
+    SaveToDatabase(mode, formDict)
+End Sub
+
+Private Function GetControlValue(ctrl As Control) As String
+    If TypeOf ctrl Is TextBox Then
+        Return DirectCast(ctrl, TextBox).Text
+    ElseIf TypeOf ctrl Is ComboBox Then
+        Return DirectCast(ctrl, ComboBox).SelectedItem?.ToString()
+    ElseIf TypeOf ctrl Is CheckBox Then
+        Return If(DirectCast(ctrl, CheckBox).Checked, "1", "0")
+    ElseIf TypeOf ctrl Is DateTimePicker Then
+        Return DirectCast(ctrl, DateTimePicker).Value.ToString("yyyy-MM-dd")
+    End If
+    Return ""
+End Function
+
+
+
+Private Sub SaveToDatabase(mode As EntryMode, dict As Dictionary(Of String, DetailItem))
+    Using conn As New OleDbConnection("Provider=Microsoft.ACE.OLEDB.12.0;Data Source=yourdb.accdb")
+        conn.Open()
+        Dim trans = conn.BeginTransaction()
+
+        Try
+            Dim aid As Integer
+
+            If mode = EntryMode.CreateNew Then
+                ' 新建AID
+                Dim cmd = New OleDbCommand("INSERT INTO 表A (创建日) VALUES (?)", conn, trans)
+                cmd.Parameters.AddWithValue("?", Now)
+                cmd.ExecuteNonQuery()
+
+                ' 取得新ID
+                cmd = New OleDbCommand("SELECT @@IDENTITY", conn, trans)
+                aid = Convert.ToInt32(cmd.ExecuteScalar())
+            Else
+                ' 假设 aid 由上层传进来（更新模式）
+                aid = CurrentEditAid ' ← 这个变量你可自定义保存
+            End If
+
+            ' 插入/更新明细（表B）
+            For Each item In dict.Values
+                If item.Status = "新建" Then
+                    Dim cmd = New OleDbCommand("INSERT INTO 表B (AID, BID, Value, Status) VALUES (?, ?, ?, ?)", conn, trans)
+                    cmd.Parameters.AddWithValue("?", aid)
+                    cmd.Parameters.AddWithValue("?", item.BID)
+                    cmd.Parameters.AddWithValue("?", item.Value)
+                    cmd.Parameters.AddWithValue("?", item.Status)
+                    cmd.ExecuteNonQuery()
+                ElseIf item.Status = "更新" Then
+                    ' 更新或插入（根据有无）
+                    Dim cmd = New OleDbCommand("
+                        UPDATE 表B SET Value = ?, Status = ?
+                        WHERE AID = ? AND BID = ?", conn, trans)
+                    cmd.Parameters.AddWithValue("?", item.Value)
+                    cmd.Parameters.AddWithValue("?", item.Status)
+                    cmd.Parameters.AddWithValue("?", aid)
+                    cmd.Parameters.AddWithValue("?", item.BID)
+
+                    Dim affected = cmd.ExecuteNonQuery()
+                    If affected = 0 Then
+                        ' 不存在则插入
+                        cmd = New OleDbCommand("INSERT INTO 表B (AID, BID, Value, Status) VALUES (?, ?, ?, ?)", conn, trans)
+                        cmd.Parameters.AddWithValue("?", aid)
+                        cmd.Parameters.AddWithValue("?", item.BID)
+                        cmd.Parameters.AddWithValue("?", item.Value)
+                        cmd.Parameters.AddWithValue("?", item.Status)
+                        cmd.ExecuteNonQuery()
+                    End If
+                End If
+            Next
+
+            ' 插入状态（表C）
+            Dim statusCmd = New OleDbCommand("INSERT INTO 表C (AID, PageCode, Status, Date) VALUES (?, ?, ?, ?)", conn, trans)
+            statusCmd.Parameters.AddWithValue("?", aid)
+            statusCmd.Parameters.AddWithValue("?", "页面代码")
+            statusCmd.Parameters.AddWithValue("?", If(mode = EntryMode.CreateNew, "新建", "更新"))
+            statusCmd.Parameters.AddWithValue("?", Now)
+            statusCmd.ExecuteNonQuery()
+
+            trans.Commit()
+            MessageBox.Show("保存成功")
+        Catch ex As Exception
+            trans.Rollback()
+            MessageBox.Show("保存失败：" & ex.Message)
+        End Try
+    End Using
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Imports System.Data.OleDb
 
 Public Sub SaveFlow(mode As EntryMode, formData As Dictionary(Of String, Object), detailItems As List(Of DetailItem), status As String)
