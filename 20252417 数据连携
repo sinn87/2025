@@ -1,0 +1,140 @@
+Imports System.Data.OleDb
+
+Public Sub SaveFlow(mode As EntryMode, formData As Dictionary(Of String, Object), detailItems As List(Of DetailItem), status As String)
+    Dim connStr As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=your.accdb;"
+    Using conn As New OleDbConnection(connStr)
+        conn.Open()
+        Dim trans = conn.BeginTransaction()
+
+        Try
+            Dim aid As String
+
+            If mode = EntryMode.CreateNew Then
+                aid = GenerateNewAID()
+                InsertMainTable(conn, trans, aid, formData)
+            Else
+                aid = formData("AID").ToString()
+            End If
+
+            For Each item In detailItems
+                Dim statusLabel As String = ""
+                Select Case mode
+                    Case EntryMode.CreateNew
+                        InsertDetail(conn, trans, aid, item, "新建")
+                    Case EntryMode.Edit
+                        InsertDetail(conn, trans, aid, item, "更新")
+                    Case EntryMode.ViewOnly
+                        UpdateStatusOnly(conn, trans, aid, item.BID, "审查完成")
+                End Select
+
+                InsertDetail(conn, trans, aid, item, statusLabel)
+            Next
+
+            InsertStatus(conn, trans, aid, status)
+
+            trans.Commit()
+            MessageBox.Show("保存成功")
+        Catch ex As Exception
+            trans.Rollback()
+            MessageBox.Show("保存失败：" & ex.Message)
+        End Try
+    End Using
+End Sub
+
+
+Private Sub InsertMainTable(conn As OleDbConnection, trans As OleDbTransaction, aid As String, formData As Dictionary(Of String, Object))
+    Dim sql = "INSERT INTO MainTable (AID, Name, Date) VALUES (?, ?, ?)"
+    Using cmd As New OleDbCommand(sql, conn, trans)
+        cmd.Parameters.AddWithValue("?", aid)
+        cmd.Parameters.AddWithValue("?", formData("Name"))
+        cmd.Parameters.AddWithValue("?", DateTime.Now)
+        cmd.ExecuteNonQuery()
+    End Using
+End Sub
+
+
+Private Sub InsertDetail(conn As OleDbConnection, trans As OleDbTransaction, aid As String, item As DetailItem, status As String)
+    Dim sql = "INSERT INTO DetailTable (AID, BID, Value, Status) VALUES (?, ?, ?, ?)"
+    Using cmd As New OleDbCommand(sql, conn, trans)
+        cmd.Parameters.AddWithValue("?", aid)
+        cmd.Parameters.AddWithValue("?", item.BID)
+        cmd.Parameters.AddWithValue("?", item.Value)
+        cmd.Parameters.AddWithValue("?", status)
+        cmd.ExecuteNonQuery()
+    End Using
+End Sub
+
+Private Sub InsertOrUpdateDetail(conn As OleDbConnection, trans As OleDbTransaction, aid As String, item As DetailItem, status As String)
+    Dim sqlCheck = "SELECT COUNT(*) FROM DetailTable WHERE AID = ? AND BID = ?"
+    Using checkCmd As New OleDbCommand(sqlCheck, conn, trans)
+        checkCmd.Parameters.AddWithValue("?", aid)
+        checkCmd.Parameters.AddWithValue("?", item.BID)
+        Dim exists = Convert.ToInt32(checkCmd.ExecuteScalar()) > 0
+
+        If exists Then
+            Dim sqlUpdate = "UPDATE DetailTable SET Value = ?, Status = ? WHERE AID = ? AND BID = ?"
+            Using updateCmd As New OleDbCommand(sqlUpdate, conn, trans)
+                updateCmd.Parameters.AddWithValue("?", item.Value)
+                updateCmd.Parameters.AddWithValue("?", status)
+                updateCmd.Parameters.AddWithValue("?", aid)
+                updateCmd.Parameters.AddWithValue("?", item.BID)
+                updateCmd.ExecuteNonQuery()
+            End Using
+        Else
+            InsertDetail(conn, trans, aid, item, status)
+        End If
+    End Using
+End Sub
+
+Private Sub UpdateStatusOnly(conn As OleDbConnection, trans As OleDbTransaction, aid As String, bid As String, status As String)
+    Dim sql = "UPDATE DetailTable SET Status = ? WHERE AID = ? AND BID = ?"
+    Using cmd As New OleDbCommand(sql, conn, trans)
+        cmd.Parameters.AddWithValue("?", status)
+        cmd.Parameters.AddWithValue("?", aid)
+        cmd.Parameters.AddWithValue("?", bid)
+        cmd.ExecuteNonQuery()
+    End Using
+End Sub
+
+
+Private Sub InsertStatus(conn As OleDbConnection, trans As OleDbTransaction, aid As String, status As String)
+    Dim sql = "INSERT INTO StatusTable (AID, Status, UpdateTime) VALUES (?, ?, ?)"
+    Using cmd As New OleDbCommand(sql, conn, trans)
+        cmd.Parameters.AddWithValue("?", aid)
+        cmd.Parameters.AddWithValue("?", status)
+        cmd.Parameters.AddWithValue("?", DateTime.Now)
+        cmd.ExecuteNonQuery()
+    End Using
+End Sub
+
+
+
+Public Class DetailItem
+    Public Property BID As String     ' 项目编号，比如 "NAME01"
+    Public Property Value As String   ' 控件的当前值，比如 "张三"
+End Class
+
+Public Function ExtractDetailItemsFromControls(parent As Control) As List(Of DetailItem)
+    Dim list As New List(Of DetailItem)
+
+    For Each ctrl In parent.Controls
+        Dim bid As String = TryCast(ctrl.Tag, String)
+        If String.IsNullOrEmpty(bid) Then Continue For
+
+        Dim value As String = ""
+
+        If TypeOf ctrl Is TextBox Then
+            value = DirectCast(ctrl, TextBox).Text
+        ElseIf TypeOf ctrl Is ComboBox Then
+            value = DirectCast(ctrl, ComboBox).Text
+        ElseIf TypeOf ctrl Is CheckBox Then
+            value = If(DirectCast(ctrl, CheckBox).Checked, "1", "0")
+        ElseIf TypeOf ctrl Is DateTimePicker Then
+            value = DirectCast(ctrl, DateTimePicker).Value.ToString("yyyy-MM-dd")
+        End If
+
+        list.Add(New DetailItem With {.BID = bid, .Value = value})
+    Next
+
+    Return list
+End Function
