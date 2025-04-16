@@ -62,3 +62,49 @@ For Each change In changes
 Next
 
 ' 然后用 updatesOnly 存入数据库
+
+
+
+
+
+
+
+Public Function ExtractDictFromControls(container As Control) As Dictionary(Of String, String)
+    Dim dict As New Dictionary(Of String, String)
+
+    For Each ctrl As Control In container.Controls
+        ' 递归处理子容器（比如 GroupBox, Panel, TabPage 等）
+        If ctrl.HasChildren Then
+            Dim childDict = ExtractDictFromControls(ctrl)
+            For Each kvp In childDict
+                dict(kvp.Key) = kvp.Value
+            Next
+        End If
+
+        ' 确保控件设置了 Tag 才处理
+        If ctrl.Tag Is Nothing OrElse String.IsNullOrWhiteSpace(ctrl.Tag.ToString()) Then Continue For
+
+        Dim key As String = ctrl.Tag.ToString()
+        Dim value As String = ""
+
+        Select Case True
+            Case TypeOf ctrl Is TextBox
+                value = DirectCast(ctrl, TextBox).Text
+
+            Case TypeOf ctrl Is ComboBox
+                value = DirectCast(ctrl, ComboBox).Text
+
+            Case TypeOf ctrl Is CheckBox
+                value = If(DirectCast(ctrl, CheckBox).Checked, "1", "0")
+
+            Case TypeOf ctrl Is DateTimePicker
+                value = DirectCast(ctrl, DateTimePicker).Value.ToString("yyyy-MM-dd")
+
+        End Select
+
+        dict(key) = value
+    Next
+
+    Return dict
+End Function
+
