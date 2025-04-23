@@ -1,3 +1,16 @@
+Private Sub Form1_Shown(sender As Object, e As EventArgs) Handles Me.Shown
+    Dim screenBounds As Rectangle = Screen.PrimaryScreen.WorkingArea
+    Dim centerX As Integer = (screenBounds.Width - Me.Width) \ 2
+    Dim centerY As Integer = (screenBounds.Height - Me.Height) \ 2
+
+    ' 居中上方偏移 100px
+    Me.Location = New Point(centerX, centerY - 100)
+End Sub
+
+
+
+
+
 Private Const FIXED_WIDTH As Integer = 1000
 Private Const FIXED_HEADER As Integer = 122
 Private Const MAX_TAB_HEIGHT As Integer = 740
