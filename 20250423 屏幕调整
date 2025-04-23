@@ -1,3 +1,56 @@
+Private Const FIXED_WIDTH As Integer = 1000
+Private Const FIXED_HEADER As Integer = 122
+Private Const MAX_TAB_HEIGHT As Integer = 740
+
+Private Sub ResizeFormForCurrentTab()
+    If myReportItem Is Nothing Then Exit Sub
+
+    Dim tabControl As TabControl = CType(myReportItem.MTabControl, TabControl)
+    Dim selectedTab As TabPage = tabControl.SelectedTab
+    Dim contentHeight As Integer = 0
+
+    ' 現在表示中のTabの最大高さを取得
+    For Each ctrl As Control In selectedTab.Controls
+        If ctrl.Bottom > contentHeight Then
+            contentHeight = ctrl.Bottom
+        End If
+    Next
+
+    ' TabControlとFormのサイズを調整
+    Dim tabControlHeight As Integer
+    Dim formHeight As Integer
+
+    If contentHeight < MAX_TAB_HEIGHT Then
+        tabControlHeight = contentHeight
+        formHeight = contentHeight + FIXED_HEADER
+        tabControl.AutoScroll = False
+    Else
+        tabControlHeight = MAX_TAB_HEIGHT
+        formHeight = MAX_TAB_HEIGHT + FIXED_HEADER
+        tabControl.AutoScroll = True
+    End If
+
+    With CType(myReportItem, UserControl)
+        .Location = New Point(-4, 85)
+        .Margin = New Padding(0)
+        .Size = New Size(FIXED_WIDTH, tabControlHeight)
+    End With
+
+    Me.AutoScroll = False
+    Me.Size = New Size(FIXED_WIDTH, formHeight)
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
 
 Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
     ResizeReportAndForm()
