@@ -1,3 +1,117 @@
+
+Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    ResizeReportAndForm()
+End Sub
+
+' フォームとUserControlのサイズを画面に合わせて調整し、
+' 必要な場合はスクロールバーも設定する
+Private Sub ResizeReportAndForm()
+    ' スクリーンサイズを取得
+    Dim screenWidth As Integer = Screen.PrimaryScreen.WorkingArea.Width
+    Dim screenHeight As Integer = Screen.PrimaryScreen.WorkingArea.Height
+
+    ' UserControlを取得
+    Dim reportUC As UserControl = CType(myReportItem, UserControl)
+    Dim tabControl As TabControl = CType(reportUC.Controls("MTabControl"), TabControl)
+
+    ' 現在表示中のTabの最大高さを取得
+    Dim maxTabHeight As Integer = 0
+    For Each ctrl As Control In tabControl.SelectedTab.Controls
+        If ctrl.Bottom > maxTabHeight Then
+            maxTabHeight = ctrl.Bottom
+        End If
+    Next
+    Const PADDING As Integer = 85
+    maxTabHeight += PADDING
+
+    ' UserControlの共通位置と幅設定
+    reportUC.Location = New Point(-4, 85)
+    reportUC.Margin = New Padding(0)
+    Dim controlWidth As Integer = 1000 ' 横幅は固定
+
+    ' 高さ900以上の画面ならそのまま内容に合わせて高さ調整
+    If screenHeight > 900 Then
+        ' スクロール不要、コンテンツに合わせたサイズ
+        reportUC.Size = New Size(controlWidth, maxTabHeight)
+        reportUC.AutoScroll = False
+        Me.AutoScroll = False
+    Else
+        ' 高さが低い場合、UserControlの高さを最大700にしてスクロール処理を行う
+        Dim maxVisibleHeight As Integer = 700
+        reportUC.Size = New Size(controlWidth, maxVisibleHeight)
+        reportUC.AutoScroll = True
+
+        ' TabPage内の高さが高い場合はスクロール可能なPanelで包む
+        InitScrollableTabPages(tabControl, maxVisibleHeight)
+    End If
+
+    ' フォームサイズ調整（UserControlの下に他のボタンなどあるなら足す）
+    Dim otherControlsHeight As Integer = 150 ' ボタン類がある前提で適当に追加
+    Dim formHeight As Integer = Math.Min(reportUC.Height + otherControlsHeight, screenHeight)
+    Me.Size = New Size(controlWidth, formHeight)
+End Sub
+
+' TabControlの各タブに対して、高さが maxHeight を超えていればPanelでラップ
+Private Sub InitScrollableTabPages(tabControl As TabControl, maxHeight As Integer)
+    For Each tabPage As TabPage In tabControl.TabPages
+        ' 既にPanelラップ済みならスキップ
+        If tabPage.Controls.Count > 0 AndAlso TypeOf tabPage.Controls(0) Is Panel Then
+            Continue For
+        End If
+
+        ' 高さをチェック
+        Dim contentHeight As Integer = 0
+        For Each ctrl As Control In tabPage.Controls
+            If ctrl.Bottom > contentHeight Then
+                contentHeight = ctrl.Bottom
+            End If
+        Next
+
+        If contentHeight > maxHeight Then
+            ' ラップ用Panel作成
+            Dim scrollPanel As New Panel With {
+                .Dock = DockStyle.Fill,
+                .AutoScroll = True
+            }
+
+            ' 元のコントロールを移動
+            Dim originalControls As New List(Of Control)
+            For Each ctrl As Control In tabPage.Controls
+                originalControls.Add(ctrl)
+            Next
+            tabPage.Controls.Clear()
+
+            For Each ctrl As Control In originalControls
+                scrollPanel.Controls.Add(ctrl)
+            Next
+
+            tabPage.Controls.Add(scrollPanel)
+        End If
+    Next
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ' 指定された TabControl の各タブページの内容をチェックし、
 ' 高さが maxHeight を超える場合は、スクロール可能な Panel をラップする
 Private Sub InitScrollableTabPages(tabControl As TabControl, maxHeight As Integer)
