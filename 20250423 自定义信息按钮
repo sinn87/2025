@@ -1,0 +1,28 @@
+Public Class CustomMessageBox
+    Public Property ResultText As String = ""
+
+    Public Sub SetMessage(message As String, button1Text As String, button2Text As String, button3Text As String)
+        Label1.Text = message
+        Button1.Text = button1Text
+        Button2.Text = button2Text
+        Button3.Text = button3Text
+    End Sub
+
+    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
+        ResultText = Button1.Text
+        Me.DialogResult = DialogResult.OK
+        Me.Close()
+    End Sub
+
+    Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+        ResultText = Button2.Text
+        Me.DialogResult = DialogResult.OK
+        Me.Close()
+    End Sub
+
+    Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
+        ResultText = Button3.Text
+        Me.DialogResult = DialogResult.OK
+        Me.Close()
+    End Sub
+End Class
