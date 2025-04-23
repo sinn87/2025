@@ -1,0 +1,42 @@
+' 指定された TabControl の各タブページの内容をチェックし、
+' 高さが maxHeight を超える場合は、スクロール可能な Panel をラップする
+Private Sub InitScrollableTabPages(tabControl As TabControl, maxHeight As Integer)
+    For Each tabPage As TabPage In tabControl.TabPages
+        ' 既に Panel でラップ済みならスキップ
+        If tabPage.Controls.Count > 0 AndAlso TypeOf tabPage.Controls(0) Is Panel Then
+            Continue For
+        End If
+
+        ' 最大のコントロールの高さを計算
+        Dim contentHeight As Integer = 0
+        For Each ctrl As Control In tabPage.Controls
+            If ctrl.Bottom > contentHeight Then
+                contentHeight = ctrl.Bottom
+            End If
+        Next
+
+        ' 高さが maxHeight を超えた場合のみ Panel を追加
+        If contentHeight > maxHeight Then
+            ' 元のコントロールを一時リストに保存
+            Dim originalControls As New List(Of Control)
+            For Each ctrl As Control In tabPage.Controls
+                originalControls.Add(ctrl)
+            Next
+            tabPage.Controls.Clear()
+
+            ' スクロール可能な Panel を作成
+            Dim scrollPanel As New Panel With {
+                .Dock = DockStyle.Fill,
+                .AutoScroll = True
+            }
+
+            ' 元のコントロールを Panel に追加
+            For Each ctrl As Control In originalControls
+                scrollPanel.Controls.Add(ctrl)
+            Next
+
+            ' Panel を TabPage に追加
+            tabPage.Controls.Add(scrollPanel)
+        End If
+    Next
+End Sub
