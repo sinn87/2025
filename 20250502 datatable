@@ -1,3 +1,96 @@
+
+Public Sub SaveChanges(tableName As String, dt As DataTable, offeringID As String)
+    Using conn As New OleDbConnection(connStr)
+        conn.Open()
+        Dim trans = conn.BeginTransaction()
+
+        Try
+            For Each row As DataRow In dt.Rows
+                Select Case row.RowState
+                    Case DataRowState.Modified
+                        ' 判断是否有字段被修改
+                        Dim changed As Boolean = False
+                        For Each col As DataColumn In dt.Columns
+                            If col.ColumnName <> "状态" AndAlso
+                               Not Equals(row(col.ColumnName), row(col.ColumnName, DataRowVersion.Original)) Then
+                                changed = True
+                                Exit For
+                            End If
+                        Next
+
+                        If changed Then
+                            ' 只插入新的一行，不动旧数据
+                            Dim insertCmd = conn.CreateCommand()
+                            insertCmd.Transaction = trans
+
+                            Dim fieldNames = New List(Of String)
+                            Dim paramNames = New List(Of String)
+
+                            insertCmd.Parameters.AddWithValue("@offeringID", offeringID)
+                            fieldNames.Add("OfferingID")
+                            paramNames.Add("@offeringID")
+
+                            insertCmd.Parameters.AddWithValue("@date", DateTime.Now)
+                            fieldNames.Add("更新日期")
+                            paramNames.Add("@date")
+
+                            For Each col As DataColumn In dt.Columns
+                                If col.ColumnName <> "ID" AndAlso col.ColumnName <> "更新日期" AndAlso col.ColumnName <> "状态" AndAlso col.ColumnName <> "OfferingID" Then
+                                    fieldNames.Add(col.ColumnName)
+                                    Dim pName = "@" & col.ColumnName
+                                    paramNames.Add(pName)
+                                    insertCmd.Parameters.AddWithValue(pName, row(col.ColumnName))
+                                End If
+                            Next
+
+                            fieldNames.Add("ID")
+                            paramNames.Add("@id")
+                            insertCmd.Parameters.AddWithValue("@id", row("ID"))
+
+                            fieldNames.Add("状态")
+                            paramNames.Add("@status")
+                            insertCmd.Parameters.AddWithValue("@status", "编辑")
+
+                            insertCmd.CommandText = $"INSERT INTO {tableName} ({String.Join(",", fieldNames)}) VALUES ({String.Join(",", paramNames)})"
+                            insertCmd.ExecuteNonQuery()
+                        End If
+
+                    Case DataRowState.Deleted
+                        ' 逻辑删除旧记录
+                        Dim delCmd = conn.CreateCommand()
+                        delCmd.Transaction = trans
+                        delCmd.CommandText = $"UPDATE {tableName} SET 状态 = '已删除' WHERE OfferingID = @offeringID AND 更新日期 = @date AND ID = @id"
+                        delCmd.Parameters.AddWithValue("@offeringID", offeringID)
+                        delCmd.Parameters.AddWithValue("@date", row("更新日期", DataRowVersion.Original))
+                        delCmd.Parameters.AddWithValue("@id", row("ID", DataRowVersion.Original))
+                        delCmd.ExecuteNonQuery()
+                End Select
+            Next
+
+            trans.Commit()
+        Catch ex As Exception
+            trans.Rollback()
+            Throw
+        End Try
+    End Using
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Imports System.Data.OleDb
 
 Public Module DataAccessHelper
