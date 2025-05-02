@@ -1,3 +1,72 @@
+Imports System.Data.OleDb
+
+Public Module DataAccessHelper
+    Private ReadOnly connStr As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=yourdb.accdb"
+
+    ' 读取数据（只读未逻辑删除的记录）
+    Public Function LoadDataByOfferingID(tableName As String, offeringID As String) As DataTable
+        Dim conn As New OleDbConnection(connStr)
+        Dim dt As New DataTable()
+        Dim sql As String = $"SELECT * FROM {tableName} WHERE OfferingID = @OfferingID AND 状态 <> '已删除'"
+        Dim adapter As New OleDbDataAdapter(sql, conn)
+        adapter.SelectCommand.Parameters.AddWithValue("@OfferingID", offeringID)
+        adapter.Fill(dt)
+        Return dt
+    End Function
+
+    ' 保存更改（插入新记录或逻辑删除）
+    Public Sub SaveChanges(tableName As String, dt As DataTable, offeringID As String)
+        Using conn As New OleDbConnection(connStr)
+            conn.Open()
+            Dim trans = conn.BeginTransaction()
+
+            Try
+                For Each row As DataRow In dt.Rows
+                    Select Case row.RowState
+                        Case DataRowState.Modified
+                            ' 插入一条新的记录
+                            Dim insertCmd = conn.CreateCommand()
+                            insertCmd.Transaction = trans
+
+                            ' 构造 INSERT（注意：字段应根据实际情况改写）
+                            insertCmd.CommandText = $"INSERT INTO {tableName} (OfferingID, 更新日期, ID, 内容, 状态) VALUES (@offeringID, @date, @id, @content, '编辑')"
+                            insertCmd.Parameters.AddWithValue("@offeringID", offeringID)
+                            insertCmd.Parameters.AddWithValue("@date", DateTime.Now)
+                            insertCmd.Parameters.AddWithValue("@id", row("ID"))
+                            insertCmd.Parameters.AddWithValue("@content", row("内容"))
+                            insertCmd.ExecuteNonQuery()
+
+                        Case DataRowState.Deleted
+                            ' 逻辑删除（更新原行状态为“已删除”）
+                            Dim originalID = row("ID", DataRowVersion.Original)
+                            Dim originalDate = row("更新日期", DataRowVersion.Original)
+
+                            Dim delCmd = conn.CreateCommand()
+                            delCmd.Transaction = trans
+                            delCmd.CommandText = $"UPDATE {tableName} SET 状态 = '已删除' WHERE OfferingID = @offeringID AND 更新日期 = @date AND ID = @id"
+                            delCmd.Parameters.AddWithValue("@offeringID", offeringID)
+                            delCmd.Parameters.AddWithValue("@date", originalDate)
+                            delCmd.Parameters.AddWithValue("@id", originalID)
+                            delCmd.ExecuteNonQuery()
+                    End Select
+                Next
+
+                trans.Commit()
+            Catch ex As Exception
+                trans.Rollback()
+                Throw
+            End Try
+        End Using
+    End Sub
+End Module
+
+
+
+
+
+
+
+
 Private originalTable As DataTable
 
 Private Sub dgv_CellValueChanged(sender As Object, e As DataGridViewCellEventArgs) Handles Me.CellValueChanged
