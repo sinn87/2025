@@ -1,0 +1,38 @@
+Imports System.Data.OleDb
+
+Public Class Form1
+
+    ' 连接字符串（需要根据你的数据库路径修改）
+    Dim connectionString As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\path\to\your\database.accdb"
+
+    ' 加载数据的方法
+    Public Sub LoadDataFromAccess()
+        ' 创建一个 DataTable 来存储数据库中的数据
+        Dim dt As New DataTable()
+
+        ' 创建数据库连接对象
+        Using connection As New OleDbConnection(connectionString)
+            ' 打开连接
+            connection.Open()
+
+            ' SQL 查询语句（假设我们要查询 Customers 表中的所有数据）
+            Dim sql As String = "SELECT * FROM Customers"
+
+            ' 创建数据适配器
+            Using adapter As New OleDbDataAdapter(sql, connection)
+                ' 使用数据适配器填充 DataTable
+                adapter.Fill(dt)
+            End Using
+        End Using
+
+        ' 将 DataTable 数据绑定到 DataGridView
+        dgv.DataSource = dt
+    End Sub
+
+    ' 表单加载时自动调用 LoadDataFromAccess 方法
+    Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        ' 调用 LoadDataFromAccess 方法加载数据
+        LoadDataFromAccess()
+    End Sub
+
+End Class
