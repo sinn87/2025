@@ -1,3 +1,27 @@
+Private originalTable As DataTable
+
+Private Sub dgv_CellValueChanged(sender As Object, e As DataGridViewCellEventArgs) Handles Me.CellValueChanged
+    If originalTable Is Nothing Then Return
+
+    Dim colName As String = Me.Columns(e.ColumnIndex).Name
+    Dim rowIndex As Integer = e.RowIndex
+
+    ' 获取当前值与原始值
+    Dim currentValue = Me.Rows(rowIndex).Cells(colName).Value?.ToString()
+    Dim originalValue = originalTable.Rows(rowIndex)(colName)?.ToString()
+
+    ' 判断是否不同，标黄
+    If currentValue <> originalValue Then
+        Me.Rows(rowIndex).Cells(colName).Style.BackColor = Color.Yellow
+    Else
+        Me.Rows(rowIndex).Cells(colName).Style.BackColor = Color.White
+    End If
+End Sub
+
+
+
+
+
 Imports System.Data.OleDb
 
 Public Class Form1
