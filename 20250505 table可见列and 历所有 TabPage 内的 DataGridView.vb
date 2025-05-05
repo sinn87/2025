@@ -1,3 +1,24 @@
+
+封装“删除 + 样式处理”的行为
+
+Private Sub dgv_CellFormatting(sender As Object, e As DataGridViewCellFormattingEventArgs) Handles dgv.CellFormatting
+    Dim dgvRow = CType(sender, DataGridView).Rows(e.RowIndex)
+    Dim rowView = TryCast(dgvRow.DataBoundItem, DataRowView)
+
+    If rowView IsNot Nothing Then
+        Dim row = rowView.Row
+        If row.RowState = DataRowState.Deleted Then
+            e.CellStyle.Font = New Font(dgv.Font, FontStyle.Strikeout)
+            e.CellStyle.BackColor = Color.LightYellow
+            e.CellStyle.ForeColor = Color.Gray
+        End If
+    End If
+End Sub
+
+
+
+
+
 ##✅ 步骤一：定义每个表格的显示列配置
 ##你可以在模块或类中定义如下字典：
 
