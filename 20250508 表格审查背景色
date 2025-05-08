@@ -1,0 +1,28 @@
+Private Sub dgv_RowPrePaint(sender As Object, e As DataGridViewRowPrePaintEventArgs) Handles dgv.RowPrePaint
+    Dim dgv = DirectCast(sender, DataGridView)
+    Dim dt As DataTable = CType(dgv.DataSource, DataTable)
+
+    ' 获取当前行对应的 DataRow
+    Dim rowView As DataRowView = CType(dgv.Rows(e.RowIndex).DataBoundItem, DataRowView)
+    Dim row As DataRow = rowView.Row
+
+    ' 如果没有 State 列则跳过
+    If Not dt.Columns.Contains("State") Then Return
+
+    ' 读取 State 值
+    Dim stateValue As Integer = 0
+    If Not IsDBNull(row("State")) Then
+        stateValue = Convert.ToInt32(row("State"))
+    End If
+
+    ' 根据 State 设置底色
+    Select Case stateValue
+        Case 1
+            dgv.Rows(e.RowIndex).DefaultCellStyle.BackColor = Color.LightCoral  ' 红色
+        Case 2
+            dgv.Rows(e.RowIndex).DefaultCellStyle.BackColor = Color.LightGray   ' 灰色
+        Case Else
+            ' 保持默认颜色
+            dgv.Rows(e.RowIndex).DefaultCellStyle.BackColor = Color.White
+    End Select
+End Sub
