@@ -1,0 +1,25 @@
+' 定义 DGV 与其保存函数的映射关系
+Private dgvSaveMap As New Dictionary(Of DataGridView, Action(Of OleDbConnection, OleDbTransaction)) From {
+    {dgv1, AddressOf SaveGrid1},
+    {dgv2, AddressOf SaveGrid2}
+}
+
+Public Sub SaveCurrentTab()
+    Using conn As New OleDbConnection(connStr)
+        conn.Open()
+        Dim tran = conn.BeginTransaction()
+        Try
+            For Each pair In dgvSaveMap
+                Dim dgv = pair.Key
+                Dim saveFunc = pair.Value
+                If IsDgvChanged(dgv) Then
+                    saveFunc.Invoke(conn, tran)
+                End If
+            Next
+            tran.Commit()
+        Catch ex As Exception
+            tran.Rollback()
+            MsgBox("保存失败：" & ex.Message)
+        End Try
+    End Using
+End Sub
