@@ -1,0 +1,107 @@
+🧩 ISavableModule 接口
+vb.net
+复制
+编辑
+Public Interface ISavableModule
+    Sub LoadData(aid As Integer)
+    Function HasChanges() As Boolean
+    Sub Save(conn As OleDbConnection, tran As OleDbTransaction)
+End Interface
+
+
+🧩 GridModule 类（可以通用）
+vb.net
+复制
+编辑
+Public Class GridModule
+    Implements ISavableModule
+
+    Private dgv As DataGridView
+    Private tableName As String
+
+    Public Sub New(targetDgv As DataGridView, tableName As String)
+        dgv = targetDgv
+        Me.tableName = tableName
+    End Sub
+
+    Public Sub LoadData(aid As Integer) Implements ISavableModule.LoadData
+        ' 示例：从数据库取数据绑定到 DGV
+        Dim dt As New DataTable
+        ' 用 tableName 构造 SQL
+        ' 示例：SELECT * FROM tableName WHERE AID = ?
+        dgv.DataSource = dt
+    End Sub
+
+    Public Function HasChanges() As Boolean Implements ISavableModule.HasChanges
+        ' 示例逻辑：根据标志列判断是否有改动
+        For Each row As DataGridViewRow In dgv.Rows
+            If row.IsNewRow Then Continue For
+            If row.Cells("Changed").Value = True Then Return True
+        Next
+        Return False
+    End Function
+
+    Public Sub Save(conn As OleDbConnection, tran As OleDbTransaction) Implements ISavableModule.Save
+        ' 示例逻辑：更新每一行
+        ' 建议使用 OleDbCommand + 参数化更新
+    End Sub
+End Class
+
+
+
+🧩 MainForm 中的使用
+vb
+复制
+编辑
+Private modules As New List(Of ISavableModule)
+
+Private Sub InitModules()
+    modules.Clear()
+
+    ' 假设 Page2 有 3 个 DGV，命名为 dgv21, dgv22, dgv23
+    modules.Add(New GridModule(Me.dgv21, "TableA1"))
+    modules.Add(New GridModule(Me.dgv22, "TableA2"))
+    modules.Add(New GridModule(Me.dgv23, "TableA3"))
+
+    ' Page3
+    modules.Add(New GridModule(Me.dgv31, "TableB1"))
+    modules.Add(New GridModule(Me.dgv32, "TableB2"))
+    modules.Add(New GridModule(Me.dgv33, "TableB3"))
+
+    ' Page4
+    modules.Add(New GridModule(Me.dgv41, "TableC1"))
+    modules.Add(New GridModule(Me.dgv42, "TableC2"))
+    modules.Add(New GridModule(Me.dgv43, "TableC3"))
+
+    ' Page5
+    modules.Add(New GridModule(Me.dgv51, "TableD1"))
+    modules.Add(New GridModule(Me.dgv52, "TableD2"))
+    modules.Add(New GridModule(Me.dgv53, "TableD3"))
+End Sub
+
+Private Sub LoadAllData(aid As Integer)
+    For Each m In modules
+        m.LoadData(aid)
+    Next
+End Sub
+
+Private Sub SaveAllData()
+    Using conn As New OleDbConnection(connStr)
+        conn.Open()
+        Dim tran = conn.BeginTransaction()
+
+        Try
+            For Each m In modules
+                If m.HasChanges() Then
+                    m.Save(conn, tran)
+                End If
+            Next
+
+            tran.Commit()
+            MsgBox("保存成功")
+        Catch ex As Exception
+            tran.Rollback()
+            MsgBox("保存失败：" & ex.Message)
+        End Try
+    End Using
+End Sub
