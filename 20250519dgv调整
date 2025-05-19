@@ -1,0 +1,26 @@
+Private Sub ResizeDataGridViewToContent(dgv As DataGridView)
+    Dim totalWidth As Integer = dgv.RowHeadersWidth
+    For Each column As DataGridViewColumn In dgv.Columns
+        totalWidth += column.Width
+    Next
+
+    Dim totalHeight As Integer = dgv.ColumnHeadersHeight
+    For Each row As DataGridViewRow In dgv.Rows
+        totalHeight += row.Height
+    Next
+
+    ' DataGridViewの幅と高さを設定する
+    dgv.Width = totalWidth + 2 ' わずかに余白を追加して、はみ出しを防ぐ
+    dgv.Height = totalHeight + 2
+End Sub
+
+Private Sub LoadData()
+    ' データをバインドする
+    DataGridView1.DataSource = GetData()
+
+    ' 列の幅を自動調整する
+    DataGridView1.AutoResizeColumns()
+
+    ' DataGridViewのサイズを自動調整する
+    ResizeDataGridViewToContent(DataGridView1)
+End Sub
