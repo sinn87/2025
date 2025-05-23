@@ -1,0 +1,40 @@
+Private Sub DataGridView1_CellEndEdit(sender As Object, e As DataGridViewCellEventArgs) Handles DataGridView1.CellEndEdit
+    ' 行や列のインデックスが無効な場合は処理を中断する
+    If e.RowIndex < 0 OrElse e.ColumnIndex < 0 Then Exit Sub
+
+    Dim dgv = DataGridView1
+    Dim columnName = dgv.Columns(e.ColumnIndex).Name
+    Dim row = dgv.Rows(e.RowIndex)
+
+    Try
+        If columnName = "开始日" Then
+            ' 「开始日」が本日より前であればエラーを表示し、本日に修正する
+            Dim startDate As Date = Convert.ToDateTime(row.Cells("开始日").Value)
+            If startDate < Date.Today Then
+                MessageBox.Show("開始日は本日より前には設定できません。", "日付エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                row.Cells("开始日").Value = Date.Today
+            End If
+
+            ' 「结束日」が「开始日」より前であればエラーを表示し、開始日の翌日に修正する
+            Dim endDate As Date = Convert.ToDateTime(row.Cells("结束日").Value)
+            If endDate < startDate Then
+                MessageBox.Show("終了日は開始日より前に設定できません。", "日付エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                row.Cells("结束日").Value = startDate.AddDays(1)
+            End If
+
+        ElseIf columnName = "结束日" Then
+            ' 「结束日」編集時にも、「开始日」との前後関係をチェックする
+            Dim endDate As Date = Convert.ToDateTime(row.Cells("结束日").Value)
+            Dim startDate As Date = Convert.ToDateTime(row.Cells("开始日").Value)
+
+            If endDate < startDate Then
+                MessageBox.Show("終了日は開始日より前に設定できません。", "日付エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                row.Cells("结束日").Value = startDate.AddDays(1)
+            End If
+        End If
+
+    Catch ex As Exception
+        ' 日付の形式が不正な場合はエラーメッセージを表示する
+        MessageBox.Show("日付の形式が正しくありません。再入力してください。", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error)
+    End Try
+End Sub
