@@ -28,3 +28,12 @@ Sub CheckDateOverlap(targetRow As DataGridViewRow)
             ' 比較対象行の開始日・終了日を取得
             Dim rowStart As Date = Convert.ToDateTime(row.Cells("开始日").Value)
             Dim rowEnd As Date = Convert.ToDateTime(row.Cells("结束日").Value)
+
+            ' 期間が重複している場合は警告を表示
+            If IsOverlap(targetStart, targetEnd, rowStart, rowEnd) Then
+                MessageBox.Show("同じ社員番号で有効化されている期間が重複しています。", "重複エラー", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Exit Sub
+            End If
+        End If
+    Next
+End Sub
