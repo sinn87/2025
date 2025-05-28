@@ -1,0 +1,30 @@
+' 2つの期間が重複しているかどうかを判定する関数
+Function IsOverlap(start1 As Date, end1 As Date, start2 As Date, end2 As Date) As Boolean
+    Return start1 <= end2 AndAlso end1 >= start2
+End Function
+
+' 対象の行とDataGridView内の他の行との期間重複をチェックする処理
+Sub CheckDateOverlap(targetRow As DataGridViewRow)
+    ' 対象行の社員IDを取得
+    Dim targetID As String = targetRow.Cells("社员ID").Value.ToString()
+    ' 対象行の開始日・終了日を取得
+    Dim targetStart As Date = Convert.ToDateTime(targetRow.Cells("开始日").Value)
+    Dim targetEnd As Date = Convert.ToDateTime(targetRow.Cells("结束日").Value)
+
+    ' DataGridViewの全行をループ
+    For Each row As DataGridViewRow In DataGridView1.Rows
+        ' 新しい空行はスキップ
+        If row.IsNewRow Then Continue For
+
+        ' 比較対象の行の社員IDと有効化フラグを取得
+        Dim rowID As String = row.Cells("社员ID").Value.ToString()
+        Dim valid As Boolean = False
+
+        ' 有効化がTrueかつ社員IDが一致する行のみチェック
+        If Boolean.TryParse(row.Cells("有效化").Value?.ToString(), valid) AndAlso rowID = targetID AndAlso valid Then
+            ' 自分自身の行はスキップ
+            If row Is targetRow Then Continue For
+
+            ' 比較対象行の開始日・終了日を取得
+            Dim rowStart As Date = Convert.ToDateTime(row.Cells("开始日").Value)
+            Dim rowEnd As Date = Convert.ToDateTime(row.Cells("结束日").Value)
