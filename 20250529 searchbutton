@@ -1,4 +1,23 @@
 
+Dim filterList As New List(Of String)
+
+If keywordNo <> "" Then
+    filterList.Add($"([社员番号] LIKE '%{keywordNo}%' OR [社员番号] IS NULL OR [社员番号] = '')")
+End If
+
+If keywordName <> "" Then
+    filterList.Add($"([名字] LIKE '%{keywordName}%' OR [名字] IS NULL OR [名字] = '')")
+End If
+
+filterList.Add("(" & 
+               "([开始日期] IS NULL OR [开始日期] = '' OR CDate([开始日期]) <= #{targetDate}#) AND " & 
+               "([结束日期] IS NULL OR [结束日期] = '' OR CDate([结束日期]) >= #{targetDate}#)" & 
+               ")")
+
+BindingSource.Filter = String.Join(" AND ", filterList)
+
+
+
 Private Function GetDataTableFromDGV(dgv As DataGridView) As DataTable
     Dim dt As New DataTable()
     For Each col As DataGridViewColumn In dgv.Columns
