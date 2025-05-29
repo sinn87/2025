@@ -1,0 +1,62 @@
+
+我们可以定义一个函数，从 dgvUsers 中重新提取数据：
+Private Function GetCurrentUsersFromDGV() As List(Of User)
+    Dim result As New List(Of User)
+    For Each row As DataGridViewRow In dgvUsers.Rows
+        If Not row.IsNewRow Then
+            Dim u As New User With {
+                .UserNo = row.Cells("UserNo").Value?.ToString(),
+                .Name = row.Cells("Name").Value?.ToString(),
+                .StartDate = Convert.ToDateTime(row.Cells("StartDate").Value),
+                .EndDate = Convert.ToDateTime(row.Cells("EndDate").Value)
+            }
+            result.Add(u)
+        End If
+    Next
+    Return result
+End Function
+
+更新你的 FilterUsers 函数：
+Private Sub FilterUsers()
+    Dim keywordNo = txtUserNo.Text.Trim()
+    Dim keywordName = txtName.Text.Trim()
+    Dim targetDate = dtpSearchDate.Value.Date
+
+    ' 从 dgv 取最新数据（可能用户已手动修改）
+    Dim currentUsers = GetCurrentUsersFromDGV()
+
+    Dim filtered = currentUsers.Where(Function(u)
+        (String.IsNullOrEmpty(keywordNo) OrElse u.UserNo.Contains(keywordNo)) AndAlso
+        (String.IsNullOrEmpty(keywordName) OrElse u.Name.Contains(keywordName)) AndAlso
+        (targetDate >= u.StartDate AndAlso targetDate <= u.EndDate)
+    ).ToList()
+
+    dgvUsers.DataSource = Nothing
+    dgvUsers.DataSource = filtered
+End Sub
+
+
+
+示例代码（清空按钮点击事件）
+
+
+Private Sub btnClearSearch_Click(sender As Object, e As EventArgs) Handles btnClearSearch.Click
+    txtUserNo.Text = ""
+    txtName.Text = ""
+    dtpSearchDate.Value = Date.Today
+    FilterUsers()
+End Sub
+
+绑定事件
+Private Sub txtUserNo_TextChanged(sender As Object, e As EventArgs) Handles txtUserNo.TextChanged
+    FilterUsers()
+End Sub
+
+Private Sub txtName_TextChanged(sender As Object, e As EventArgs) Handles txtName.TextChanged
+    FilterUsers()
+End Sub
+
+Private Sub dtpSearchDate_ValueChanged(sender As Object, e As EventArgs) Handles dtpSearchDate.ValueChanged
+    FilterUsers()
+End Sub
+
