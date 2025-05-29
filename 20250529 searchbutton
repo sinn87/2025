@@ -1,4 +1,81 @@
 
+Private Function GetDataTableFromDGV(dgv As DataGridView) As DataTable
+    Dim dt As New DataTable()
+    For Each col As DataGridViewColumn In dgv.Columns
+        dt.Columns.Add(col.Name, GetType(String))
+    Next
+
+    For Each row As DataGridViewRow In dgv.Rows
+        If Not row.IsNewRow Then
+            Dim newRow = dt.NewRow()
+            For Each col As DataGridViewColumn In dgv.Columns
+                newRow(col.Name) = row.Cells(col.Index).Value?.ToString()
+            Next
+            dt.Rows.Add(newRow)
+        End If
+    Next
+    Return dt
+End Function
+
+
+Private Sub btnSearch_Click(sender As Object, e As EventArgs) Handles btnSearch.Click
+    Dim dt As DataTable = GetDataTableFromDGV(dgvUsers)
+
+    Dim bs As New BindingSource()
+    bs.DataSource = dt
+
+    Dim keywordNo = txtUserNo.Text.Trim()
+    Dim keywordName = txtUserName.Text.Trim()
+    Dim targetDate = dtpSearchDate.Value.Date.ToString("yyyy-MM-dd")
+
+    Dim filterList As New List(Of String)
+
+    If keywordNo <> "" Then
+        filterList.Add($"UserNo LIKE '%{keywordNo}%'")
+    End If
+
+    If keywordName <> "" Then
+        filterList.Add($"Name LIKE '%{keywordName}%'")
+    End If
+
+    ' 日期条件： StartDate <= targetDate <= EndDate
+    filterList.Add($"CDate(StartDate) <= #{targetDate}# AND CDate(EndDate) >= #{targetDate}#")
+
+    bs.Filter = String.Join(" AND ", filterList)
+
+    dgvUsers.DataSource = bs
+End Sub
+
+Private Sub btnClear_Click(sender As Object, e As EventArgs) Handles btnClear.Click
+    txtUserNo.Clear()
+    txtUserName.Clear()
+    dtpSearchDate.Value = Today
+
+    ' 清除筛选，重新提取当前 DGV 数据
+    Dim dt As DataTable = GetDataTableFromDGV(dgvUsers)
+    Dim bs As New BindingSource()
+    bs.DataSource = dt
+    dgvUsers.DataSource = bs
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 我们可以定义一个函数，从 dgvUsers 中重新提取数据：
 Private Function GetCurrentUsersFromDGV() As List(Of User)
     Dim result As New List(Of User)
