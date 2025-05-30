@@ -1,0 +1,20 @@
+Private Sub dgv_ColumnHeaderMouseClick(sender As Object, e As DataGridViewCellMouseEventArgs) Handles dgv.ColumnHeaderMouseClick
+    If dgv.Columns(e.ColumnIndex).Name = "番号" Then
+        Dim sortAsc As Boolean = True ' 可以设置成字段存储或状态变量
+
+        Dim rows = dgv.Rows.Cast(Of DataGridViewRow)().
+                   Where(Function(r) Not r.IsNewRow).
+                   OrderBy(Function(r)
+                               Return Integer.Parse(r.Cells("番号").Value.ToString())
+                           End Function)
+
+        If Not sortAsc Then
+            rows = rows.Reverse()
+        End If
+
+        dgv.Rows.Clear()
+        For Each row In rows
+            dgv.Rows.Add(row.Cells.Cast(Of DataGridViewCell).Select(Function(c) c.Value).ToArray())
+        Next
+    End If
+End Sub
