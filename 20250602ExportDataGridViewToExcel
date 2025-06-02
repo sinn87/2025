@@ -1,3 +1,53 @@
+Private Sub ExportDataGridViewToExcelLateBinding(dgv As DataGridView, filePath As String)
+    Dim excelApp As Object = Nothing
+    Dim workbook As Object = Nothing
+    Dim worksheet As Object = Nothing
+
+    Try
+        excelApp = CreateObject("Excel.Application")
+        workbook = excelApp.Workbooks.Add()
+        worksheet = workbook.Sheets(1)
+
+        ' 写入表头
+        For col = 0 To dgv.Columns.Count - 1
+            worksheet.Cells(1, col + 1).Value = dgv.Columns(col).HeaderText
+        Next
+
+        ' 把数据一次性写到二维数组
+        Dim rowCount = dgv.Rows.Count
+        Dim colCount = dgv.Columns.Count
+        Dim data(rowCount - 1, colCount - 1) As Object
+
+        For row = 0 To rowCount - 1
+            If dgv.Rows(row).IsNewRow Then Continue For
+            For col = 0 To colCount - 1
+                data(row, col) = dgv.Rows(row).Cells(col).Value
+            Next
+        Next
+
+        ' 一次性写入（从第2行开始）
+        Dim startCell = worksheet.Cells(2, 1)
+        Dim endCell = worksheet.Cells(rowCount + 1, colCount)
+        worksheet.Range(startCell, endCell).Value = data
+
+        workbook.SaveAs(filePath)
+        MessageBox.Show("导出成功！" & vbCrLf & filePath)
+
+        workbook.Close(False)
+        excelApp.Quit()
+
+    Catch ex As Exception
+        MessageBox.Show("导出失败：" & ex.Message)
+    Finally
+        ReleaseCom(worksheet)
+        ReleaseCom(workbook)
+        ReleaseCom(excelApp)
+    End Try
+End Sub
+
+
+
+
 Imports Microsoft.Office.Interop
 
 Private Sub ExportDataGridViewToExcel(dgv As DataGridView)
