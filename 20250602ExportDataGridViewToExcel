@@ -1,0 +1,57 @@
+Imports Microsoft.Office.Interop
+
+Private Sub ExportDataGridViewToExcel(dgv As DataGridView)
+    Dim excelApp As New Excel.Application
+    Dim workbook As Excel.Workbook = excelApp.Workbooks.Add()
+    Dim worksheet As Excel.Worksheet = workbook.Sheets(1)
+
+    excelApp.Visible = False
+
+    ' 写入列标题
+    For col = 0 To dgv.Columns.Count - 1
+        worksheet.Cells(1, col + 1) = dgv.Columns(col).HeaderText
+    Next
+
+    ' 写入数据行
+    For row = 0 To dgv.Rows.Count - 1
+        If dgv.Rows(row).IsNewRow Then Continue For
+
+        For col = 0 To dgv.Columns.Count - 1
+            Dim value = dgv.Rows(row).Cells(col).Value
+            ' 若为日期类型，转为短日期格式
+            If TypeOf value Is Date Then
+                worksheet.Cells(row + 2, col + 1).NumberFormat = "yyyy/mm/dd"
+                worksheet.Cells(row + 2, col + 1).Value = CType(value, Date).ToShortDateString()
+            Else
+                worksheet.Cells(row + 2, col + 1).Value = value
+            End If
+        Next
+    Next
+
+    ' 保存对话框
+    Dim sfd As New SaveFileDialog()
+    sfd.Filter = "Excel Files (*.xlsx)|*.xlsx"
+    sfd.FileName = "Export_" & DateTime.Now.ToString("yyyyMMdd_HHmmss")
+
+    If sfd.ShowDialog() = DialogResult.OK Then
+        workbook.SaveAs(sfd.FileName)
+        MessageBox.Show("导出成功：" & vbCrLf & sfd.FileName)
+    End If
+
+    workbook.Close()
+    excelApp.Quit()
+
+    ' 清理 COM 对象
+    ReleaseObject(worksheet)
+    ReleaseObject(workbook)
+    ReleaseObject(excelApp)
+End Sub
+
+Private Sub ReleaseObject(ByVal obj As Object)
+    Try
+        System.Runtime.InteropServices.Marshal.ReleaseComObject(obj)
+    Catch
+    Finally
+        obj = Nothing
+    End Try
+End Sub
