@@ -156,3 +156,106 @@ Public Class RoundedTextBox
     End Function
 End Class
 
+
+
+
+
+
+
+
+
+
+
+Imports System.Drawing.Drawing2D
+Imports System.ComponentModel
+
+<ToolboxBitmap(GetType(TextBox))>
+Public Class RoundedTextBox
+    Inherits UserControl
+
+    Private WithEvents innerTextBox As New TextBox()
+
+    ' 可调整的属性
+    <Category("外观")>
+    Public Property BorderRadius As Integer = 15
+
+    <Category("外观")>
+    Public Property BorderColor As Color = Color.Gray
+
+    <Category("外观")>
+    Public Property BorderThickness As Integer = 1
+
+    <Category("外观")>
+    Public Property TextBackColor As Color
+        Get
+            Return innerTextBox.BackColor
+        End Get
+        Set(value As Color)
+            innerTextBox.BackColor = value
+        End Set
+    End Property
+
+    <Browsable(True)>
+    Public Overrides Property Text As String
+        Get
+            Return innerTextBox.Text
+        End Get
+        Set(value As String)
+            innerTextBox.Text = value
+        End Set
+    End Property
+
+    Public Sub New()
+        Me.DoubleBuffered = True
+        Me.BackColor = Color.Transparent
+
+        ' 初始化 TextBox 样式
+        innerTextBox.BorderStyle = BorderStyle.None
+        innerTextBox.BackColor = Color.White
+        innerTextBox.ForeColor = Color.Black
+        innerTextBox.Font = Me.Font
+        innerTextBox.Multiline = False
+
+        ' 添加到控件中
+        Me.Controls.Add(innerTextBox)
+        UpdateLayout()
+    End Sub
+
+    Protected Overrides Sub OnResize(e As EventArgs)
+        MyBase.OnResize(e)
+        UpdateLayout()
+        Invalidate()
+    End Sub
+
+    Private Sub UpdateLayout()
+        ' 计算边距
+        Dim paddingX As Integer = BorderRadius \ 2
+        Dim paddingY As Integer = Math.Max(2, (Me.Height - innerTextBox.PreferredHeight) \ 2)
+
+        innerTextBox.Location = New Point(paddingX, paddingY)
+        innerTextBox.Width = Me.Width - 2 * paddingX
+        innerTextBox.Height = innerTextBox.PreferredHeight
+    End Sub
+
+    Protected Overrides Sub OnPaint(e As PaintEventArgs)
+        MyBase.OnPaint(e)
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias
+
+        Dim rect As New Rectangle(0, 0, Me.Width - 1, Me.Height - 1)
+        Dim path As GraphicsPath = GetRoundedRectPath(rect, BorderRadius)
+
+        Using borderPen As New Pen(BorderColor, BorderThickness)
+            e.Graphics.DrawPath(borderPen, path)
+        End Using
+    End Sub
+
+    Private Function GetRoundedRectPath(rect As Rectangle, radius As Integer) As GraphicsPath
+        Dim path As New GraphicsPath()
+        path.AddArc(rect.X, rect.Y, radius, radius, 180, 90)
+        path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90)
+        path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90)
+        path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90)
+        path.CloseFigure()
+        Return path
+    End Function
+End Class
