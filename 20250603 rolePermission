@@ -1,0 +1,122 @@
+Public Class RolePermission
+    Public Property RoleID As Integer
+    Public Property CategoryID As Integer
+    Public Property StatusID As Integer
+    Public Property PermissionType As String
+    Public Property IsAllowed As Boolean
+End Class
+
+Public Class PermissionService
+    Private connectionString As String
+    Private permissionCache As Dictionary(Of Tuple(Of Integer, Integer, Integer, String), Boolean)
+    Private userRoles As List(Of Integer)
+    Private assignedCases As HashSet(Of Integer) ' 新增：用户担当的案件ID
+
+    Public Sub New(databasePath As String)
+        connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={databasePath}"
+        permissionCache = New Dictionary(Of Tuple(Of Integer, Integer, Integer, String), Boolean)()
+        userRoles = New List(Of Integer)()
+        assignedCases = New HashSet(Of Integer)()
+    End Sub
+
+    Public Sub LoadUserPermissions(userID As Integer)
+        Dim departmentIDs As New List(Of Integer)
+
+        ' Step 1: 下载用户的部门ID
+        Using conn As New OleDbConnection(connectionString)
+            conn.Open()
+
+            Using cmd As New OleDbCommand("SELECT DepartmentID FROM UserDepartment WHERE UserID = ?", conn)
+                cmd.Parameters.AddWithValue("?", userID)
+                Using reader = cmd.ExecuteReader()
+                    While reader.Read()
+                        departmentIDs.Add(reader.GetInt32(0))
+                    End While
+                End Using
+            End Using
+
+            ' Step 2: 下载这些部门的角色ID
+            If departmentIDs.Count = 0 Then Return
+
+            Dim deptParam = String.Join(",", departmentIDs.Select(Function(id) "?"))
+            Using cmd As New OleDbCommand($"SELECT RoleID FROM DepartmentRole WHERE DepartmentID IN ({deptParam})", conn)
+                For Each id In departmentIDs
+                    cmd.Parameters.AddWithValue("?", id)
+                Next
+                Using reader = cmd.ExecuteReader()
+                    While reader.Read()
+                        userRoles.Add(reader.GetInt32(0))
+                    End While
+                End Using
+            End Using
+
+            ' Step 3: 下载这些角色的权限
+            If userRoles.Count = 0 Then Return
+
+            Dim roleParam = String.Join(",", userRoles.Select(Function(id) "?"))
+            Using cmd As New OleDbCommand($"SELECT RoleID, CategoryID, StatusID, PermissionType, IsAllowed FROM RolePermission WHERE RoleID IN ({roleParam})", conn)
+                For Each id In userRoles
+                    cmd.Parameters.AddWithValue("?", id)
+                Next
+                Using reader = cmd.ExecuteReader()
+                    While reader.Read()
+                        Dim roleID = reader.GetInt32(0)
+                        Dim categoryID = reader.GetInt32(1)
+                        Dim statusID = reader.GetInt32(2)
+                        Dim permType = reader.GetString(3)
+                        Dim isAllowed = reader.GetBoolean(4)
+
+                        Dim key = Tuple.Create(roleID, categoryID, statusID, permType)
+                        If Not permissionCache.ContainsKey(key) Then
+                            permissionCache.Add(key, isAllowed)
+                        End If
+                    End While
+                End Using
+            End Using
+
+            ' Step 4: 下载当前用户担当的案件ID
+            Using cmd As New OleDbCommand("SELECT CaseID FROM CaseAssignment WHERE UserID = ?", conn)
+                cmd.Parameters.AddWithValue("?", userID)
+                Using reader = cmd.ExecuteReader()
+                    While reader.Read()
+                        assignedCases.Add(reader.GetInt32(0))
+                    End While
+                End Using
+            End Using
+        End Using
+    End Sub
+
+    ' 判断是否是某案件的担当
+    Public Function IsAssignedToCase(caseID As Integer) As Boolean
+        Return assignedCases.Contains(caseID)
+    End Function
+
+    ' 扩展后的权限判断
+    Public Function HasPermission(categoryID As Integer, statusID As Integer, permissionType As String, Optional caseID As Integer? = Nothing) As Boolean
+        ' 1. 先查角色权限
+        For Each roleID In userRoles
+            Dim key = Tuple.Create(roleID, categoryID, statusID, permissionType)
+            If permissionCache.ContainsKey(key) AndAlso permissionCache(key) Then
+                Return True
+            End If
+        Next
+
+        ' 2. 再判断是否为案件担当者，且案件状态是 1 或 2 时，可拥有“更新”“阅览”等特定权限
+        If caseID.HasValue AndAlso assignedCases.Contains(caseID.Value) Then
+            If statusID = 1 OrElse statusID = 2 Then
+                If permissionType = "更新" OrElse permissionType = "阅览" Then
+                    Return True
+                End If
+            End If
+        End If
+
+        Return False
+    End Function
+End Class
+
+' 使用示例
+Dim service As New PermissionService("C:\YourAccessFile.accdb")
+service.LoadUserPermissions(userID:=1)
+
+Dim canUpdate = service.HasPermission(categoryID:=1, statusID:=2, permissionType:="更新")
+MessageBox.Show("是否有更新权限: " & canUpdate.ToString())
