@@ -1,0 +1,158 @@
+Imports System.Drawing
+Imports System.Drawing.Drawing2D
+Imports System.Windows.Forms
+
+Public Class RoundImageButton
+    Inherits Button
+
+    Public Property CornerRadius As Integer = 20
+
+    Protected Overrides Sub OnPaint(pevent As PaintEventArgs)
+        ' 防止闪烁
+        Me.SetStyle(ControlStyles.UserPaint Or ControlStyles.AllPaintingInWmPaint Or ControlStyles.OptimizedDoubleBuffer, True)
+        MyBase.OnPaint(pevent)
+
+        ' 清除背景
+        pevent.Graphics.Clear(Me.Parent.BackColor)
+        pevent.Graphics.SmoothingMode = SmoothingMode.AntiAlias
+
+        ' 画圆角背景
+        Dim rect As Rectangle = Me.ClientRectangle
+        Dim path As New GraphicsPath()
+        path.AddArc(0, 0, CornerRadius, CornerRadius, 180, 90)
+        path.AddArc(rect.Width - CornerRadius, 0, CornerRadius, CornerRadius, 270, 90)
+        path.AddArc(rect.Width - CornerRadius, rect.Height - CornerRadius, CornerRadius, CornerRadius, 0, 90)
+        path.AddArc(0, rect.Height - CornerRadius, CornerRadius, CornerRadius, 90, 90)
+        path.CloseFigure()
+
+        Using brush As New SolidBrush(Me.BackColor)
+            pevent.Graphics.FillPath(brush, path)
+        End Using
+
+        ' 设置 Region 为圆角形状
+        Me.Region = New Region(path)
+
+        ' 画图像（如果有）
+        If Me.Image IsNot Nothing Then
+            Dim imgX As Integer = (rect.Width - Me.Image.Width) \ 2
+            Dim imgY As Integer = (rect.Height - Me.Image.Height - 10) \ 2
+            pevent.Graphics.DrawImage(Me.Image, imgX, imgY, Me.Image.Width, Me.Image.Height)
+        End If
+
+        ' 画文字
+        Dim sf As New StringFormat() With {
+            .Alignment = StringAlignment.Center,
+            .LineAlignment = StringAlignment.Far
+        }
+        Using textBrush As New SolidBrush(Me.ForeColor)
+            pevent.Graphics.DrawString(Me.Text, Me.Font, textBrush, rect, sf)
+        End Using
+    End Sub
+End Class
+
+
+
+Imports System.Drawing.Drawing2D
+
+Public Class RoundedDialog
+    Inherits Form
+
+    Protected Overrides Sub OnPaint(e As PaintEventArgs)
+        MyBase.OnPaint(e)
+        Dim radius As Integer = 20
+        Dim path As New GraphicsPath()
+        path.AddArc(0, 0, radius, radius, 180, 90)
+        path.AddArc(Me.Width - radius, 0, radius, radius, 270, 90)
+        path.AddArc(Me.Width - radius, Me.Height - radius, radius, radius, 0, 90)
+        path.AddArc(0, Me.Height - radius, radius, radius, 90, 90)
+        path.CloseAllFigures()
+        Me.Region = New Region(path)
+    End Sub
+
+    Public Sub New()
+        Me.FormBorderStyle = FormBorderStyle.None
+        Me.BackColor = Color.White
+        Me.StartPosition = FormStartPosition.CenterParent
+        Me.Size = New Size(300, 150)
+    End Sub
+End Class
+
+
+
+
+
+
+
+Imports System.Drawing.Drawing2D
+
+Public Class RoundedTextBox
+    Inherits UserControl
+
+    Private WithEvents innerTextBox As New TextBox()
+
+    Public Property BorderRadius As Integer = 15
+    Public Property BorderColor As Color = Color.Gray
+    Public Property BorderThickness As Integer = 1
+    Public Property TextBackColor As Color
+        Get
+            Return innerTextBox.BackColor
+        End Get
+        Set(value As Color)
+            innerTextBox.BackColor = value
+        End Set
+    End Property
+
+    Public Overrides Property Text As String
+        Get
+            Return innerTextBox.Text
+        End Get
+        Set(value As String)
+            innerTextBox.Text = value
+        End Set
+    End Property
+
+    Public Sub New()
+        Me.DoubleBuffered = True
+        Me.BackColor = Color.Transparent
+        innerTextBox.BorderStyle = BorderStyle.None
+        innerTextBox.Multiline = False
+        innerTextBox.BackColor = Color.White
+        innerTextBox.ForeColor = Color.Black
+        innerTextBox.Font = Me.Font
+        Me.Controls.Add(innerTextBox)
+    End Sub
+
+    Protected Overrides Sub OnResize(e As EventArgs)
+        MyBase.OnResize(e)
+        UpdateLayout()
+    End Sub
+
+    Private Sub UpdateLayout()
+        innerTextBox.Location = New Point(BorderThickness + 5, BorderThickness + 2)
+        innerTextBox.Width = Me.Width - 2 * BorderThickness - 10
+        innerTextBox.Height = Me.Height - 2 * BorderThickness - 4
+    End Sub
+
+    Protected Overrides Sub OnPaint(e As PaintEventArgs)
+        MyBase.OnPaint(e)
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias
+
+        Dim rect As New Rectangle(0, 0, Me.Width - 1, Me.Height - 1)
+        Dim path As GraphicsPath = GetRoundedRectPath(rect, BorderRadius)
+
+        Using borderPen As New Pen(BorderColor, BorderThickness)
+            e.Graphics.DrawPath(borderPen, path)
+        End Using
+    End Sub
+
+    Private Function GetRoundedRectPath(rect As Rectangle, radius As Integer) As GraphicsPath
+        Dim path As New GraphicsPath()
+        path.AddArc(rect.X, rect.Y, radius, radius, 180, 90)
+        path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90)
+        path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90)
+        path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90)
+        path.CloseFigure()
+        Return path
+    End Function
+End Class
+
