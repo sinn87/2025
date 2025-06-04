@@ -1,0 +1,123 @@
+Imports System.ComponentModel
+Imports System.Drawing.Drawing2D
+
+<ToolboxBitmap(GetType(Button))>
+Public Class ShadowButton
+    Inherits Button
+
+    Private _borderColor As Color = Color.Blue
+    Private _borderWidth As Integer = 2
+    Private _borderRadius As Integer = 8
+    Private _shadowColor As Color = Color.FromArgb(60, Color.Black)
+    Private _shadowOffset As Integer = 3
+
+    <Category("外观")>
+    Public Property BorderColor As Color
+        Get
+            Return _borderColor
+        End Get
+        Set(value As Color)
+            _borderColor = value
+            Me.Invalidate()
+        End Set
+    End Property
+
+    <Category("外观")>
+    Public Property BorderWidth As Integer
+        Get
+            Return _borderWidth
+        End Get
+        Set(value As Integer)
+            _borderWidth = value
+            Me.Invalidate()
+        End Set
+    End Property
+
+    <Category("外观")>
+    Public Property BorderRadius As Integer
+        Get
+            Return _borderRadius
+        End Get
+        Set(value As Integer)
+            _borderRadius = value
+            Me.Invalidate()
+        End Set
+    End Property
+
+    <Category("外观")>
+    Public Property ShadowColor As Color
+        Get
+            Return _shadowColor
+        End Get
+        Set(value As Color)
+            _shadowColor = value
+            Me.Invalidate()
+        End Set
+    End Property
+
+    <Category("外观")>
+    Public Property ShadowOffset As Integer
+        Get
+            Return _shadowOffset
+        End Get
+        Set(value As Integer)
+            _shadowOffset = value
+            Me.Invalidate()
+        End Set
+    End Property
+
+    Public Sub New()
+        Me.FlatStyle = FlatStyle.Flat
+        Me.FlatAppearance.BorderSize = 0
+        Me.BackColor = Color.White
+        Me.ForeColor = Color.Black
+        Me.ImageAlign = ContentAlignment.MiddleLeft
+        Me.TextAlign = ContentAlignment.MiddleRight
+        Me.TextImageRelation = TextImageRelation.ImageBeforeText
+    End Sub
+
+    Protected Overrides Sub OnPaint(pevent As PaintEventArgs)
+        pevent.Graphics.SmoothingMode = SmoothingMode.AntiAlias
+
+        Dim shadowRect = New Rectangle(ShadowOffset, ShadowOffset, Me.Width - ShadowOffset - 1, Me.Height - ShadowOffset - 1)
+        Dim mainRect = New Rectangle(0, 0, Me.Width - ShadowOffset - 1, Me.Height - ShadowOffset - 1)
+
+        Dim shadowPath = GetRoundedPath(shadowRect, BorderRadius)
+        Dim mainPath = GetRoundedPath(mainRect, BorderRadius)
+
+        ' 画阴影
+        Using shadowBrush As New SolidBrush(ShadowColor)
+            pevent.Graphics.FillPath(shadowBrush, shadowPath)
+        End Using
+
+        ' 画主按钮背景
+        Using bgBrush As New SolidBrush(Me.BackColor)
+            pevent.Graphics.FillPath(bgBrush, mainPath)
+        End Using
+
+        ' 画边框
+        Using borderPen As New Pen(BorderColor, BorderWidth)
+            pevent.Graphics.DrawPath(borderPen, mainPath)
+        End Using
+
+        ' 画图标 + 文本（让 base 处理）
+        MyBase.OnPaint(pevent)
+    End Sub
+
+    Private Function GetRoundedPath(rect As Rectangle, radius As Integer) As GraphicsPath
+        Dim path As New GraphicsPath()
+        Dim dia = radius * 2
+
+        If radius <= 0 Then
+            path.AddRectangle(rect)
+        Else
+            path.AddArc(rect.X, rect.Y, dia, dia, 180, 90)
+            path.AddArc(rect.Right - dia, rect.Y, dia, dia, 270, 90)
+            path.AddArc(rect.Right - dia, rect.Bottom - dia, dia, dia, 0, 90)
+            path.AddArc(rect.X, rect.Bottom - dia, dia, dia, 90, 90)
+            path.CloseFigure()
+        End If
+
+        Return path
+    End Function
+End Class
