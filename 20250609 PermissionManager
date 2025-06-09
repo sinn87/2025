@@ -1,0 +1,27 @@
+Public Class PermissionManager
+    Private Shared _instance As PermissionManager
+    Private _permissionService As PermissionService
+
+    Public ReadOnly Property Service As PermissionService
+        Get
+            Return _permissionService
+        End Get
+    End Property
+
+    Private Sub New()
+        ' 私有构造防止外部创建
+    End Sub
+
+    Public Shared Function GetInstance() As PermissionManager
+        If _instance Is Nothing Then
+            _instance = New PermissionManager()
+        End If
+        Return _instance
+    End Function
+
+    ' 登录时调用此方法初始化权限
+    Public Sub Initialize(dataAccess As IDataAccess, userId As Integer)
+        _permissionService = New PermissionService(dataAccess)
+        _permissionService.Load(userId)
+    End Sub
+End Class
