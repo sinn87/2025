@@ -1,0 +1,99 @@
+Imports System.ComponentModel
+Imports System.Drawing.Drawing2D
+Imports System.Windows.Forms
+
+' 创建一个继承自 ComboBox 的自定义控件
+Public Class RoundComboBox
+    Inherits ComboBox
+
+    ' 控件构造函数
+    Public Sub New()
+        ' 设置控件样式为 OwnerDrawFixed 表示我们要自己绘制这个控件
+        Me.DrawMode = DrawMode.OwnerDrawFixed
+
+        ' 设置控件为 DropDownList 模式，防止编辑（也可修改为 DropDown）
+        Me.DropDownStyle = ComboBoxStyle.DropDownList
+
+        ' 设置控件的 FlatStyle 为 Flat，即扁平风格
+        Me.FlatStyle = FlatStyle.Flat
+
+        ' 设置默认高度
+        Me.ItemHeight = 25
+    End Sub
+
+    ' 重写 OnPaint 事件，让控件绘制自己的外观（不过 ComboBox 本身不支持完全自绘外框，所以只重绘边框）
+    Protected Overrides Sub OnPaint(ByVal e As PaintEventArgs)
+        ' 什么都不做，避免父类绘图逻辑覆盖我们自定义的绘图
+    End Sub
+
+    ' 重写 OnDrawItem 来绘制下拉列表项
+    Protected Overrides Sub OnDrawItem(ByVal e As DrawItemEventArgs)
+        ' 如果没有项则直接退出
+        If e.Index < 0 Then Return
+
+        ' 根据是否选中，选择背景色
+        Dim bgColor As Color = If((e.State And DrawItemState.Selected) = DrawItemState.Selected, Color.LightGray, Color.White)
+
+        ' 填充背景色
+        e.Graphics.FillRectangle(New SolidBrush(bgColor), e.Bounds)
+
+        ' 绘制文字
+        Dim text As String = Me.Items(e.Index).ToString()
+        e.Graphics.DrawString(text, e.Font, Brushes.Black, e.Bounds.X + 5, e.Bounds.Y + 4)
+    End Sub
+
+    ' 重写 WndProc 是为了让 ComboBox 正常显示圆角边框
+    Protected Overrides Sub WndProc(ByRef m As Message)
+        MyBase.WndProc(m)
+
+        ' 消息编号 133 是 WM_NCPAINT，用于非客户区绘制
+        If m.Msg = 133 OrElse m.Msg = 15 Then
+            ' 创建 Graphics 对象用于绘制边框
+            Using g As Graphics = Me.CreateGraphics()
+                ' 设置平滑绘图模式
+                g.SmoothingMode = SmoothingMode.AntiAlias
+
+                ' 定义圆角矩形路径
+                Dim path As GraphicsPath = GetRoundRectangle(New Rectangle(0, 0, Me.Width - 1, Me.Height - 1), 8)
+
+                ' 清除原边框
+                g.Clear(Me.BackColor)
+
+                ' 绘制白色背景
+                Using bgBrush As New SolidBrush(Me.BackColor)
+                    g.FillPath(bgBrush, path)
+                End Using
+
+                ' 绘制灰色边框
+                Using borderPen As New Pen(Color.Gray, 1)
+                    g.DrawPath(borderPen, path)
+                End Using
+            End Using
+        End If
+    End Sub
+
+    ' 生成圆角路径的辅助函数
+    Private Function GetRoundRectangle(rect As Rectangle, radius As Integer) As GraphicsPath
+        Dim path As New GraphicsPath()
+
+        ' 左上角
+        path.AddArc(rect.X, rect.Y, radius, radius, 180, 90)
+        ' 顶边
+        path.AddLine(rect.X + radius, rect.Y, rect.Right - radius, rect.Y)
+        ' 右上角
+        path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90)
+        ' 右边
+        path.AddLine(rect.Right, rect.Y + radius, rect.Right, rect.Bottom - radius)
+        ' 右下角
+        path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90)
+        ' 底边
+        path.AddLine(rect.Right - radius, rect.Bottom, rect.X + radius, rect.Bottom)
+        ' 左下角
+        path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90)
+        ' 左边
+        path.AddLine(rect.X, rect.Bottom - radius, rect.X, rect.Y + radius)
+
+        path.CloseFigure()
+        Return path
+    End Function
+End Class
