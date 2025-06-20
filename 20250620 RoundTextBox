@@ -82,4 +82,15 @@ Public Class RoundTextBox
             innerTextBox.Text = value
         End Set
     End Property
+
+Private Sub RoundTextBox_Resize(sender As Object, e As EventArgs)
+    ' 设置 innerTextBox 的位置和宽度，使其自动适应控件大小
+    innerTextBox.Width = Me.Width - 16
+    innerTextBox.Height = Me.Height - 14
+    innerTextBox.Location = New Point(8, (Me.Height - innerTextBox.Height) \ 2)
+End Sub
+
+AddHandler Me.Resize, AddressOf RoundTextBox_Resize ' ⬅️ 加这行
 End Class
+
+
