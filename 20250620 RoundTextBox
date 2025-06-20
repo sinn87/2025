@@ -118,3 +118,10 @@ Private Sub RoundTextBox_Resize(sender As Object, e As EventArgs)
 
     SetRoundRegion() ' ✅ 控件大小变更时重新设置 Region
 End Sub
+
+
+Private Sub SetRoundRegion()
+    Dim rect As New Rectangle(0, 0, Me.Width, Me.Height)
+    Dim path As GraphicsPath = GetRoundPath(rect, _cornerRadius)
+    Me.Region = New Region(path)
+End Sub
