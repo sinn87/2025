@@ -19,8 +19,20 @@ Public Class RoundComboBox
 
         ' 设置默认高度
         Me.ItemHeight = 25
+' 显示箭头  
+RoundComboBox1.ShowArrow = True 
     End Sub
-
+' 属性：可以在外部设置是否显示箭头
+<Category("外观")>
+Public Property ShowArrow As Boolean
+    Get
+        Return _showArrow
+    End Get
+    Set(value As Boolean)
+        _showArrow = value
+        Me.Invalidate() ' 重新绘制控件
+    End Set
+End Property
     ' 重写 OnPaint 事件，让控件绘制自己的外观（不过 ComboBox 本身不支持完全自绘外框，所以只重绘边框）
     Protected Overrides Sub OnPaint(ByVal e As PaintEventArgs)
         ' 什么都不做，避免父类绘图逻辑覆盖我们自定义的绘图
@@ -67,6 +79,22 @@ Public Class RoundComboBox
                 ' 绘制灰色边框
                 Using borderPen As New Pen(Color.Gray, 1)
                     g.DrawPath(borderPen, path)
+                End Using
+
+            ' ✅ 只有在 ShowArrow = True 时绘制箭头
+            If _showArrow Then
+                Dim arrowSize As Integer = 6
+                Dim arrowX As Integer = Me.Width - 18
+                Dim arrowY As Integer = Me.Height \ 2 - 1
+
+                Dim arrowPoints() As Point = {
+                    New Point(arrowX, arrowY),
+                    New Point(arrowX + arrowSize, arrowY),
+                    New Point(arrowX + arrowSize \ 2, arrowY + arrowSize)
+                }
+
+                Using brush As New SolidBrush(Color.Black)
+                    g.FillPolygon(brush, arrowPoints)
                 End Using
             End Using
         End If
