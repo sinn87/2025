@@ -125,3 +125,21 @@ Private Sub SetRoundRegion()
     Dim path As GraphicsPath = GetRoundPath(rect, _cornerRadius)
     Me.Region = New Region(path)
 End Sub
+
+
+' 控件边缘偏移值（原本是固定为1）
+Private _edgeOffset As Integer = 1
+
+' 公共属性，允许在设计器中设置
+<Category("外观"), Description("边框绘制时的边缘偏移像素数")>
+Public Property EdgeOffset As Integer
+    Get
+        Return _edgeOffset
+    End Get
+    Set(value As Integer)
+        _edgeOffset = value
+        Me.Invalidate()     ' 重绘
+        SetRoundRegion()    ' 重新设置区域
+    End Set
+End Property
+
