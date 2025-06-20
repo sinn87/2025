@@ -101,3 +101,20 @@ Public Class RoundTextBox
         RaiseEvent TextChanged(Me, e)
     End Sub
 End Class
+
+
+
+Public Sub New()
+    ' ...前面已有的设置...
+    AddHandler Me.Resize, AddressOf RoundTextBox_Resize
+    RoundTextBox_Resize(Me, EventArgs.Empty) ' 初始化时调用一次
+    SetRoundRegion() ' ✅ 添加此行
+End Sub
+
+Private Sub RoundTextBox_Resize(sender As Object, e As EventArgs)
+    innerTextBox.Width = Me.Width - 16
+    innerTextBox.Height = Me.Height - 14
+    innerTextBox.Location = New Point(8, (Me.Height - innerTextBox.Height) \ 2)
+
+    SetRoundRegion() ' ✅ 控件大小变更时重新设置 Region
+End Sub
