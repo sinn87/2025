@@ -1,34 +1,37 @@
 Imports System.Drawing.Drawing2D
 Imports System.Windows.Forms
+Imports System.ComponentModel
 
-' 创建一个自定义圆角TextBox控件
+' 自定义带圆角边框的 TextBox 控件
 Public Class RoundTextBox
-    Inherits UserControl  ' 使用UserControl方便组合标准TextBox和绘制边框
+    Inherits UserControl
 
-    ' 内部使用的标准TextBox
-    Private innerTextBox As New TextBox()
+    ' 内部标准 TextBox
+    Private WithEvents innerTextBox As New TextBox()
 
-    ' 圆角半径
+    ' 圆角半径（可写死也可以做成属性）
     Private _cornerRadius As Integer = 8
 
-    ' 控件构造函数
+    ' 构造函数
     Public Sub New()
-        ' 设置控件大小
+        ' 设置默认尺寸
         Me.Size = New Size(150, 30)
 
-        ' 设置内部TextBox样式
+        ' 设置内部 TextBox 外观
         innerTextBox.BorderStyle = BorderStyle.None
-        innerTextBox.Location = New Point(8, 7) ' 位置略微偏移以居中
-        innerTextBox.Width = Me.Width - 16
-        innerTextBox.Anchor = AnchorStyles.Left Or AnchorStyles.Right Or AnchorStyles.Top
         innerTextBox.BackColor = Me.BackColor
         innerTextBox.ForeColor = Me.ForeColor
         innerTextBox.Font = Me.Font
+        innerTextBox.Multiline = False ' 默认为单行
 
-        ' 将TextBox添加到自定义控件中
+        ' 添加 TextBox 到当前控件
         Me.Controls.Add(innerTextBox)
 
-        ' 设置控件样式（启用双缓冲，防止闪烁）
+        ' 响应控件尺寸变化，自动调整 TextBox 尺寸
+        AddHandler Me.Resize, AddressOf RoundTextBox_Resize
+        RoundTextBox_Resize(Me, EventArgs.Empty)
+
+        ' 启用双缓冲等样式优化绘图
         Me.SetStyle(ControlStyles.AllPaintingInWmPaint Or
                     ControlStyles.OptimizedDoubleBuffer Or
                     ControlStyles.ResizeRedraw Or
@@ -36,29 +39,35 @@ Public Class RoundTextBox
         Me.UpdateStyles()
     End Sub
 
-    ' 重写OnPaint方法，自定义绘制圆角边框
+    ' 控件大小变化时，重新设置内部 TextBox 的尺寸与位置
+    Private Sub RoundTextBox_Resize(sender As Object, e As EventArgs)
+        innerTextBox.Width = Me.Width - 16
+        innerTextBox.Height = Me.Height - 14
+        innerTextBox.Location = New Point(8, (Me.Height - innerTextBox.Height) \ 2)
+    End Sub
+
+    ' 绘制圆角边框
     Protected Overrides Sub OnPaint(e As PaintEventArgs)
         MyBase.OnPaint(e)
 
-        ' 设置抗锯齿绘图模式
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias
 
-        ' 定义圆角矩形区域
+        ' 定义圆角路径
         Dim rect As New Rectangle(0, 0, Me.Width - 1, Me.Height - 1)
         Dim path As GraphicsPath = GetRoundPath(rect, _cornerRadius)
 
-        ' 填充背景（和控件背景保持一致）
-        Using backgroundBrush As New SolidBrush(Me.BackColor)
-            e.Graphics.FillPath(backgroundBrush, path)
+        ' 填充背景
+        Using b As New SolidBrush(Me.BackColor)
+            e.Graphics.FillPath(b, path)
         End Using
 
-        ' 绘制边框（灰色）
-        Using borderPen As New Pen(Color.Gray, 1)
-            e.Graphics.DrawPath(borderPen, path)
+        ' 画边框
+        Using pen As New Pen(Color.Gray, 1)
+            e.Graphics.DrawPath(pen, path)
         End Using
     End Sub
 
-    ' 创建一个带圆角的路径
+    ' 构造圆角路径
     Private Function GetRoundPath(rect As Rectangle, radius As Integer) As GraphicsPath
         Dim path As New GraphicsPath()
         path.AddArc(rect.X, rect.Y, radius, radius, 180, 90)
@@ -73,7 +82,8 @@ Public Class RoundTextBox
         Return path
     End Function
 
-    ' 将Text属性映射到内部TextBox
+    ' ✅ 暴露 Text 属性供外部访问（覆盖 UserControl 的 Text 属性）
+    <Category("外观"), Description("输入框的文字内容")>
     Public Overrides Property Text As String
         Get
             Return innerTextBox.Text
@@ -83,14 +93,11 @@ Public Class RoundTextBox
         End Set
     End Property
 
-Private Sub RoundTextBox_Resize(sender As Object, e As EventArgs)
-    ' 设置 innerTextBox 的位置和宽度，使其自动适应控件大小
-    innerTextBox.Width = Me.Width - 16
-    innerTextBox.Height = Me.Height - 14
-    innerTextBox.Location = New Point(8, (Me.Height - innerTextBox.Height) \ 2)
-End Sub
+    ' ✅ 将 TextChanged 事件向外传播
+    Public Shadows Event TextChanged As EventHandler
 
-AddHandler Me.Resize, AddressOf RoundTextBox_Resize ' ⬅️ 加这行
+    ' 当 innerTextBox 内容改变时，触发外部 TextChanged 事件
+    Private Sub innerTextBox_TextChanged(sender As Object, e As EventArgs) Handles innerTextBox.TextChanged
+        RaiseEvent TextChanged(Me, e)
+    End Sub
 End Class
-
-
