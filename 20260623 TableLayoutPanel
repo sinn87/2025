@@ -1,0 +1,21 @@
+Public Class MyTableLayoutPanel
+    Inherits TableLayoutPanel
+
+    Public Property BorderLineColor As Color = Color.Red
+
+    Protected Overrides Sub OnPaint(ByVal e As PaintEventArgs)
+        MyBase.OnPaint(e)
+
+        Using pen As New Pen(BorderLineColor, 1)
+            For row = 1 To RowCount - 1
+                Dim y = GetRowHeights().Take(row).Sum()
+                e.Graphics.DrawLine(pen, 0, y, Me.Width, y)
+            Next
+
+            For col = 1 To ColumnCount - 1
+                Dim x = GetColumnWidths().Take(col).Sum()
+                e.Graphics.DrawLine(pen, x, 0, x, Me.Height)
+            Next
+        End Using
+    End Sub
+End Class
