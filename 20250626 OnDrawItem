@@ -1,0 +1,34 @@
+Protected Overrides Sub OnDrawItem(ByVal e As DrawItemEventArgs)
+    MyBase.OnDrawItem(e)
+
+    ' 空检查
+    If e.Index < 0 OrElse e.Index >= Me.Items.Count Then Return
+
+    e.DrawBackground()
+
+    ' 默认字体和颜色
+    Dim textBrush As Brush = If((e.State And DrawItemState.Selected) = DrawItemState.Selected,
+                                Brushes.White, Brushes.Black)
+
+    Dim bgColor As Color = If((e.State And DrawItemState.Selected) = DrawItemState.Selected,
+                              SystemColors.Highlight, Color.White)
+
+    Using bgBrush As New SolidBrush(bgColor)
+        e.Graphics.FillRectangle(bgBrush, e.Bounds)
+    End Using
+
+    ' 获取实际显示内容
+    Dim itemText As String = ""
+
+    ' 如果 DataSource 是 DataTable（注意：Items 是 DataRowView）
+    If TypeOf Me.Items(e.Index) Is DataRowView Then
+        itemText = CType(Me.Items(e.Index), DataRowView)(Me.DisplayMember).ToString()
+    Else
+        itemText = Me.Items(e.Index).ToString()
+    End If
+
+    ' 画出文字
+    e.Graphics.DrawString(itemText, e.Font, textBrush, e.Bounds.Left + 2, e.Bounds.Top + 2)
+
+    e.DrawFocusRectangle()
+End Sub
