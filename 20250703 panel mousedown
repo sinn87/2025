@@ -1,0 +1,25 @@
+Imports System.Runtime.InteropServices
+
+Public Class Form1
+
+    ' 导入 Windows API
+    <DllImport("user32.dll")>
+    Public Shared Function ReleaseCapture() As Boolean
+    End Function
+
+    <DllImport("user32.dll")>
+    Public Shared Function SendMessage(hWnd As IntPtr, wMsg As Integer, wParam As Integer, lParam As Integer) As Integer
+    End Function
+
+    ' 常量定义
+    Private Const WM_NCLBUTTONDOWN As Integer = &HA1
+    Private Const HTCAPTION As Integer = &H2
+
+    ' 在窗体的 MouseDown 事件中调用
+    Private Sub Form1_MouseDown(sender As Object, e As MouseEventArgs) Handles Me.MouseDown
+        If e.Button = MouseButtons.Left Then
+            ReleaseCapture()
+            SendMessage(Me.Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0)
+        End If
+    End Sub
+End Class
