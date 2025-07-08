@@ -1,0 +1,147 @@
+以下是您的功能设计文档《案件详细录入》的日语翻译版本：
+
+---
+
+# 機能設計：案件詳細入力
+
+## 1. 機能概要
+
+ユーザーが案件種別を選択すると、詳細入力画面に遷移し、選択された案件種別に応じたタブテンプレート（A/B/C/D）を動的に読み込み、案件の詳細情報を入力します。
+
+## 2. 機能実装フロー
+
+1. ユーザーが案件種別を選択し、詳細入力画面に遷移
+2. 左上の画像ボタンでメイン画面に戻る／右上の「戻る」ボタンで種別選択画面に戻る
+3. 画面上部に案件種別と画面オープン時間を表示
+4. 案件種別に応じて対応するTabテンプレート（A/B/C/D）を動的に作成
+5. 「新規案件登録」ボタンをクリックしてデータを保存
+
+## 3. 業務ルール
+
+* すべてのコントロールのTagはデータベースのフィールドと一対一で対応すること
+* フィールドデータとDataGridViewデータの両方に対応
+* 「戻る」「保存」「登録」操作をサポート
+* トランザクション処理によりデータ整合性を保証
+
+## 4. 使用ユーザー
+
+* システム全ユーザー
+
+## 5. 画面設計要件
+
+* A/B/C/D の4種類のテンプレートを動的に読み込み可能であること
+* 上部に画像ボタン、案件種別表示、時間表示、「戻る」ボタン、「新規案件登録」ボタンを配置
+* [案件詳細入力サンプル](./UIDesign/案件详细录入示例.html)を参考に設計
+
+## 6. データ保存ルール
+
+* **フィールドデータの保存**：タブページ内のコントロールのTagに対応するデータを取得し、値がある場合はその値を、ない場合はnullとして保存
+* **DataGridViewデータの保存**：DataTableをデータソースとして使用し、行の状態を管理
+* **審査記録の作成ルール**：
+
+  * フィールドデータがある場合、審査記録を作成
+  * フィールドデータがなくてもDataGridViewデータがある場合は審査記録を作成
+  * フィールドまたは表データのある全タブページについて審査記録を作成すること
+
+## 7. 技術アーキテクチャ
+
+### 7.1 レイヤー構成
+
+* **UI層（CaseDetailEntryForm）**：画面表示とユーザーインターフェースを担当
+* **ビジネスロジック層（TemplateLogicManager + CaseManager）**：データ抽出、検証、保存ロジックを担当
+* **データアクセス層（CaseRepository）**：データベース操作を担当
+
+### 7.2 テンプレートシステム
+
+* **ITemplateUIインターフェース**：テンプレートUIの共通仕様を定義
+* **TemplateA/B/C/D**：UIレイアウトのみを担当する具体的なテンプレート実装
+* **TemplateLogicManager**：すべてのテンプレートに共通する業務ロジックを担当
+
+### 7.3 データ抽出メカニズム
+
+```vb
+' フィールドデータ抽出
+Dim tabData As Dictionary(Of Integer, Dictionary(Of String, String)) = _logicManager.ExtractModifiedData()
+
+' DataGridViewデータ抽出
+Dim gridData As Dictionary(Of String, (TabIndex As Integer, Table As DataTable)) = _logicManager.ExtractGridData()
+```
+
+## 8. DataTable 行状態管理
+
+### 8.1 データ保存の仕組み
+
+* **DataGridView のデータソース**：DataTable を直接使用
+* **行状態の認識**：DataRow\.RowState により自動判別
+
+  * `DataRowState.Added` - 新規行
+  * `DataRowState.Modified` - 編集済み行
+  * `DataRowState.Deleted` - 削除行
+  * `DataRowState.Unchanged` - 変更なし
+
+### 8.2 データ保存フロー
+
+1. `ExtractGridData()`でDataSource取得
+2. DataRow\.RowStateに基づき分類
+3. `SaveDataTableWithTransaction()`でトランザクション保存
+4. システムフィールド（更新者・更新日時など）を自動補完
+
+### 8.3 特徴と利点
+
+* **パフォーマンス最適化**：複雑な変換不要、DataTableをそのまま利用
+* **行状態管理**：行の増減・変更を正確に保持
+* **トランザクション対応**：一貫性のあるデータ保存が可能
+* **メンテナンス負荷軽減**：システム項目を自動処理
+* **後方互換性**：既存のデータアクセスレイヤーと互換性あり
+
+### 8.4 システム項目の自動処理
+
+* **新規行**：ステータス「新規登録」を自動設定、案件IDを付与
+* **更新行**：ステータス「更新済み」、更新日時を記録
+* **削除行**：対応レコードをDBから削除
+
+## 9. トランザクション処理
+
+### 9.1 トランザクションフロー
+
+1. 案件のメインレコードを作成
+2. フィールドデータを一括保存
+3. DataGridViewデータ（行状態あり）を保存
+4. 審査記録を作成
+5. トランザクションをコミット、またはロールバック
+
+### 9.2 エラー処理
+
+* 任意のステップで失敗した場合、全処理をロールバック
+* エラーログを詳細に記録
+* ユーザーに分かりやすいエラーメッセージを表示
+
+## 10. テンプレート切替メカニズム
+
+### 10.1 テンプレート選択
+
+```vb
+Select Case caseType.ToUpper()
+    Case "A"
+        _template = New Controls.TabTemplates.TemplateA()
+    Case "B"
+        _template = New Controls.TabTemplates.TemplateB()
+    Case "C"
+        _template = New Controls.TabTemplates.TemplateC()
+    Case "D"
+        _template = New Controls.TabTemplates.TemplateD()
+    Case Else
+        _template = New Controls.TabTemplates.TemplateA()
+End Select
+```
+
+### 10.2 テンプレート仕様
+
+* 各テンプレートは6つのタブページを含む
+* 各タブページに「未登録／登録済み」などの状態表示を含む
+* TextBox、ComboBox、DateTimePicker、RichTextBox、DataGridViewなどの複数のコントロールに対応
+* すべてのコントロールのTagプロパティがデータベースのフィールド名と対応
+
+---
+
+如需修改或继续撰写其他相关文档，也可以告诉我。
