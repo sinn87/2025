@@ -1,0 +1,101 @@
+Imports System.Drawing
+Imports System.Drawing.Drawing2D
+Imports System.Windows.Forms
+
+' 创建一个自定义 ComboBox 控件，继承自 ComboBox
+Public Class RoundedComboBox
+    Inherits ComboBox
+
+    Public Sub New()
+        ' 设置 ComboBox 样式为 Flat
+        Me.FlatStyle = FlatStyle.Flat
+
+        ' 设置背景色为白色（你可以根据需要修改）
+        Me.BackColor = Color.White
+
+        ' 设置为不可多行绘制（启用 OwnerDrawFixed 模式用于自定义绘图）
+        Me.DrawMode = DrawMode.OwnerDrawFixed
+
+        ' 设置固定项高度
+        Me.ItemHeight = Me.Height - 6 ' 避免文字贴边
+    End Sub
+
+    ' 重写 OnPaintBackground 来绘制圆角背景和边框
+    Protected Overrides Sub OnPaintBackground(pevent As PaintEventArgs)
+        ' 不调用基类，不用默认绘制
+        ' MyBase.OnPaintBackground(pevent)
+
+        Dim g As Graphics = pevent.Graphics
+
+        ' 启用抗锯齿，让圆角更平滑
+        g.SmoothingMode = SmoothingMode.AntiAlias
+
+        ' 定义圆角矩形范围
+        Dim rect As New Rectangle(0, 0, Me.Width - 1, Me.Height - 1)
+
+        ' 定义圆角路径
+        Dim path As GraphicsPath = GetRoundedRectPath(rect, 8)
+
+        ' 填充背景色
+        Using brush As New SolidBrush(Me.BackColor)
+            g.FillPath(brush, path)
+        End Using
+
+        ' 画边框
+        Using pen As New Pen(Color.Gray)
+            g.DrawPath(pen, path)
+        End Using
+    End Sub
+
+    ' 重写 OnDrawItem 来绘制下拉项
+    Protected Overrides Sub OnDrawItem(e As DrawItemEventArgs)
+        If e.Index < 0 Then Return
+
+        ' 绘制背景（选中项为高亮色，否则为白）
+        Dim isSelected As Boolean = (e.State And DrawItemState.Selected) = DrawItemState.Selected
+        Dim backColor As Color = If(isSelected, SystemColors.Highlight, Me.BackColor)
+        Dim foreColor As Color = If(isSelected, SystemColors.HighlightText, Me.ForeColor)
+
+        Using b As New SolidBrush(backColor)
+            e.Graphics.FillRectangle(b, e.Bounds)
+        End Using
+
+        ' 绘制文字
+        Using f As New SolidBrush(foreColor)
+            e.Graphics.DrawString(Me.Items(e.Index).ToString(), Me.Font, f, e.Bounds.X, e.Bounds.Y)
+        End Using
+    End Sub
+
+    ' 辅助函数：返回圆角路径
+    Private Function GetRoundedRectPath(rect As Rectangle, radius As Integer) As GraphicsPath
+        Dim path As New GraphicsPath()
+        Dim d As Integer = radius * 2
+
+        ' 左上角圆弧
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90)
+
+        ' 顶部线
+        path.AddLine(rect.X + radius, rect.Y, rect.Right - radius, rect.Y)
+
+        ' 右上角圆弧
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90)
+
+        ' 右侧线
+        path.AddLine(rect.Right, rect.Y + radius, rect.Right, rect.Bottom - radius)
+
+        ' 右下角圆弧
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90)
+
+        ' 底部线
+        path.AddLine(rect.Right - radius, rect.Bottom, rect.X + radius, rect.Bottom)
+
+        ' 左下角圆弧
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90)
+
+        ' 左侧线
+        path.AddLine(rect.X, rect.Bottom - radius, rect.X, rect.Y + radius)
+
+        path.CloseFigure()
+        Return path
+    End Function
+End Class
