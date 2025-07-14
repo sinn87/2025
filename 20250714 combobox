@@ -1,4 +1,81 @@
 
+Public Sub New()
+    Me.DoubleBuffered = True
+    Me.BackColor = Color.White
+    Me.Size = New Size(150, 30)
+
+    ' 设置 ComboBox 的基本属性
+    With innerComboBox
+        .FlatStyle = FlatStyle.Flat
+        .DropDownStyle = ComboBoxStyle.DropDownList
+        .BackColor = Color.White
+        .ForeColor = Color.Black
+        .Margin = New Padding(0)
+        .IntegralHeight = False
+        .Dock = DockStyle.Fill
+
+        .DrawMode = DrawMode.OwnerDrawFixed ' 启用自绘
+        .ItemHeight = Me.Height - 8         ' 避免上下贴边
+    End With
+
+    Me.Controls.Add(innerComboBox)
+    Me.Padding = New Padding(2)
+End Sub
+
+' 自绘主框上的下拉按钮和背景
+Protected Overrides Sub OnPaint(e As PaintEventArgs)
+    MyBase.OnPaint(e)
+    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias
+
+    Dim rect As New Rectangle(0, 0, Me.Width - 1, Me.Height - 1)
+
+    Using path As GraphicsPath = GetRoundedRectPath(rect, 8)
+        Using pen As New Pen(Color.Gray, 1)
+            Using bgBrush As New SolidBrush(Me.BackColor)
+                e.Graphics.FillPath(bgBrush, path) ' 填充白色背景
+                e.Graphics.DrawPath(pen, path)     ' 画边框
+            End Using
+        End Using
+    End Using
+
+    ' 箭头绘制（你可以自定义大小）
+    Dim arrowRect As New Rectangle(Me.Width - 20, (Me.Height - 6) \ 2, 12, 6)
+
+    ' 创建一个向下的箭头路径
+    Using path As New GraphicsPath()
+        path.AddLine(arrowRect.Left, arrowRect.Top, arrowRect.Left + arrowRect.Width \ 2, arrowRect.Bottom)
+        path.AddLine(arrowRect.Left + arrowRect.Width \ 2, arrowRect.Bottom, arrowRect.Right, arrowRect.Top)
+
+        Using arrowBrush As New SolidBrush(Color.Black)
+            e.Graphics.FillPath(arrowBrush, path)
+        End Using
+    End Using
+End Sub
+
+' 自绘下拉项（不改变样式，只控制文字和背景）
+Private Sub innerComboBox_DrawItem(sender As Object, e As DrawItemEventArgs) Handles innerComboBox.DrawItem
+    If e.Index < 0 Then Return
+
+    Dim isSelected As Boolean = (e.State And DrawItemState.Selected) = DrawItemState.Selected
+    Dim backColor As Color = If(isSelected, SystemColors.Highlight, Me.BackColor)
+    Dim foreColor As Color = If(isSelected, SystemColors.HighlightText, Me.ForeColor)
+
+    Using b As New SolidBrush(backColor)
+        e.Graphics.FillRectangle(b, e.Bounds)
+    End Using
+
+    Using f As New SolidBrush(foreColor)
+        e.Graphics.DrawString(innerComboBox.Items(e.Index).ToString(), Me.Font, f, e.Bounds.X, e.Bounds.Y)
+    End Using
+End Sub
+
+
+
+
+
+
+
+
 Imports System.Drawing
 Imports System.Drawing.Drawing2D
 Imports System.Windows.Forms
