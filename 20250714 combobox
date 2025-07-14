@@ -1,3 +1,118 @@
+
+Imports System.Drawing
+Imports System.Drawing.Drawing2D
+Imports System.Windows.Forms
+
+' 自定义控件：圆角 ComboBox（只实现圆角 + Flat，无其它功能）
+Public Class RoundedComboBox
+    Inherits UserControl
+
+    ' 内部实际使用的 ComboBox 控件
+    Private WithEvents innerComboBox As New ComboBox()
+
+    Public Sub New()
+        ' 开启双缓冲，减少闪烁
+        Me.DoubleBuffered = True
+
+        ' 设置控件的背景色为白色
+        Me.BackColor = Color.White
+
+        ' 设置控件的大小（可自定义）
+        Me.Size = New Size(150, 30)
+
+        ' 设置 ComboBox 的基本属性
+        With innerComboBox
+            .FlatStyle = FlatStyle.Flat ' 设置为 Flat 样式
+            .DropDownStyle = ComboBoxStyle.DropDownList ' 设置为下拉选择模式
+            .BackColor = Color.White ' 背景白色
+            .ForeColor = Color.Black ' 字体颜色
+            .Margin = New Padding(0) ' 移除边距
+            .IntegralHeight = False ' 禁止自动高度（避免下拉项超出边界）
+            .Dock = DockStyle.Fill ' 填满整个 UserControl
+        End With
+
+        ' 将 ComboBox 添加到 UserControl
+        Me.Controls.Add(innerComboBox)
+
+        ' 设置内边距（让边框和内容之间有点空间）
+        Me.Padding = New Padding(2)
+    End Sub
+
+    ' 公开 Items 属性，允许外部添加选项
+    Public ReadOnly Property Items() As ComboBox.ObjectCollection
+        Get
+            Return innerComboBox.Items
+        End Get
+    End Property
+
+    ' 公开 SelectedIndex 属性
+    Public Property SelectedIndex As Integer
+        Get
+            Return innerComboBox.SelectedIndex
+        End Get
+        Set(value As Integer)
+            innerComboBox.SelectedIndex = value
+        End Set
+    End Property
+
+    ' 公开 SelectedItem 属性
+    Public Property SelectedItem As Object
+        Get
+            Return innerComboBox.SelectedItem
+        End Get
+        Set(value As Object)
+            innerComboBox.SelectedItem = value
+        End Set
+    End Property
+
+    ' 重写 OnPaint，用来绘制圆角边框
+    Protected Overrides Sub OnPaint(e As PaintEventArgs)
+        MyBase.OnPaint(e)
+
+        ' 启用抗锯齿，防止边框锯齿
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias
+
+        ' 计算绘制区域（减去1像素以避免溢出）
+        Dim rect As New Rectangle(0, 0, Me.Width - 1, Me.Height - 1)
+
+        ' 定义圆角路径
+        Using path As GraphicsPath = GetRoundedRectPath(rect, 8) ' 圆角半径 8
+            ' 创建边框笔刷
+            Using pen As New Pen(Color.Gray, 1)
+                e.Graphics.DrawPath(pen, path) ' 绘制边框
+            End Using
+        End Using
+    End Sub
+
+    ' 辅助函数：创建一个圆角矩形路径
+    Private Function GetRoundedRectPath(rect As Rectangle, radius As Integer) As GraphicsPath
+        Dim path As New GraphicsPath()
+        Dim d As Integer = radius * 2
+
+        ' 添加 4 个角的圆弧 + 中间的直线
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90)
+        path.AddLine(rect.X + radius, rect.Y, rect.Right - radius, rect.Y)
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90)
+        path.AddLine(rect.Right, rect.Y + radius, rect.Right, rect.Bottom - radius)
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90)
+        path.AddLine(rect.Right - radius, rect.Bottom, rect.X + radius, rect.Bottom)
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90)
+        path.AddLine(rect.X, rect.Bottom - radius, rect.X, rect.Y + radius)
+
+        path.CloseFigure()
+        Return path
+    End Function
+End Class
+
+
+
+
+
+
+
+
+
+
 Imports System.Drawing
 Imports System.Drawing.Drawing2D
 Imports System.Windows.Forms
