@@ -1,4 +1,37 @@
 
+Private Sub innerComboBox_DrawItem(sender As Object, e As DrawItemEventArgs) Handles innerComboBox.DrawItem
+    If e.Index < 0 Then Return
+
+    e.DrawBackground()
+
+    Dim combo As ComboBox = DirectCast(sender, ComboBox)
+    Dim item As Object = combo.Items(e.Index)
+
+    Dim displayText As String
+
+    ' 检查是否为 DataRowView，并取出 DisplayMember 对应字段值
+    If TypeOf item Is DataRowView Then
+        Dim drv As DataRowView = DirectCast(item, DataRowView)
+        displayText = drv(combo.DisplayMember).ToString()
+    Else
+        displayText = item.ToString()
+    End If
+
+    Dim isSelected As Boolean = (e.State And DrawItemState.Selected) = DrawItemState.Selected
+    Dim foreColor As Color = If(isSelected, SystemColors.HighlightText, Me.ForeColor)
+
+    Using f As New SolidBrush(foreColor)
+        e.Graphics.DrawString(displayText, combo.Font, f, e.Bounds.X, e.Bounds.Y)
+    End Using
+
+    e.DrawFocusRectangle()
+End Sub
+
+
+
+
+
+
 Public Sub New()
     Me.DoubleBuffered = True
     Me.BackColor = Color.White
