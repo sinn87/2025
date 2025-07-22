@@ -1,0 +1,30 @@
+Private Sub ApplyTabVisibilityByMode(mode As FormMode)
+    For Each tab As TabPage In TabControl1.TabPages.Cast(Of TabPage).ToList()
+        Dim tabKey As String = tab.Name
+        Dim status As String = ""
+
+        If tabStatusDict.ContainsKey(tabKey) Then
+            status = tabStatusDict(tabKey)
+        End If
+
+        Dim shouldShow As Boolean
+
+        Select Case mode
+            Case FormMode.View
+                ' 只显示 "审查依赖中"
+                shouldShow = (status = "审查依赖中")
+            Case FormMode.Edit, FormMode.Review
+                ' 隐藏 "审查依赖中"，其它显示
+                shouldShow = (status <> "审查依赖中")
+            Case Else
+                shouldShow = True
+        End Select
+
+        ' 如果需要隐藏，先移除；显示则添加回来
+        If Not shouldShow AndAlso TabControl1.TabPages.Contains(tab) Then
+            TabControl1.TabPages.Remove(tab)
+        ElseIf shouldShow AndAlso Not TabControl1.TabPages.Contains(tab) Then
+            TabControl1.TabPages.Add(tab)
+        End If
+    Next
+End Sub
