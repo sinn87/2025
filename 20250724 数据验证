@@ -1,0 +1,58 @@
+' 指定されたコントロール以下のすべてのTextBoxに対して、Tagが"数字"の場合にKeyPressイベントをバインドする
+Public Sub BindNumericTextboxes(root As Control)
+    For Each ctrl As Control In root.Controls
+        ' TextBoxかつTagが"数字"である場合、数字のみ入力可能なイベントを追加
+        If TypeOf ctrl Is TextBox AndAlso ctrl.Tag IsNot Nothing AndAlso ctrl.Tag.ToString() = "数字" Then
+            AddHandler CType(ctrl, TextBox).KeyPress, AddressOf NumericOnly_KeyPress
+        End If
+
+        ' 子コントロールを持つ場合は再帰的に処理
+        If ctrl.HasChildren Then
+            BindNumericTextboxes(ctrl)
+        End If
+    Next
+End Sub
+
+' 数字以外のキー入力を無効にする処理
+Private Sub NumericOnly_KeyPress(sender As Object, e As KeyPressEventArgs)
+    If Not Char.IsControl(e.KeyChar) AndAlso Not Char.IsDigit(e.KeyChar) Then
+        e.Handled = True ' 不正な入力を無効化
+    End If
+End Sub
+
+
+' コントロール内のDateTimePickerを自動的にペアリングし、開始日と終了日の関係をバインドする
+Public Sub AutoBindDateRanges(container As Control)
+    ' 指定されたコンテナ内のすべてのDateTimePickerを取得
+    Dim allDatePickers = container.Controls.OfType(Of DateTimePicker).ToList()
+
+    For Each startPicker In allDatePickers
+        ' 名前に"From"または"開始"が含まれるコントロールを開始日とみなす
+        If startPicker.Name.Contains("From") OrElse startPicker.Name.Contains("開始") Then
+            ' 対応する終了日用コントロールの名前を生成
+            Dim endName = startPicker.Name.Replace("From", "To").Replace("開始", "終了")
+            ' 同名の終了日コントロールを探す
+            Dim endPicker = allDatePickers.FirstOrDefault(Function(p) p.Name = endName)
+
+            If endPicker IsNot Nothing Then
+                ' 開始日と終了日をバインド（相互に制限をかける）
+                BindDateRange(startPicker, endPicker)
+            End If
+        End If
+    Next
+End Sub
+
+' 開始日と終了日を相互に制限するイベントをバインド
+Public Sub BindDateRange(startPicker As DateTimePicker, endPicker As DateTimePicker)
+    ' 開始日が変更されたとき、終了日の最小日付を制限
+    AddHandler startPicker.ValueChanged,
+        Sub()
+            endPicker.MinDate = startPicker.Value
+        End Sub
+
+    ' 終了日が変更されたとき、開始日の最大日付を制限
+    AddHandler endPicker.ValueChanged,
+        Sub()
+            startPicker.MaxDate = endPicker.Value
+        End Sub
+End Sub
