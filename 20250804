@@ -1,0 +1,75 @@
+✅ 示例代码（在你的 DgvUserControl 内实现）
+🔹 1. 添加属性到 UserControl：
+vbnet
+复制
+编辑
+' 是否启用标签风格渲染
+Public Property EnableLabelStyle As Boolean = False
+
+' 需要应用标签样式的列索引（从0开始），默认是第3列
+Public Property LabelColumnIndex As Integer = 2
+🔹 2. 在构造函数或 Load 中绑定 CellPainting：
+vbnet
+复制
+编辑
+Private Sub DgvUserControl_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    AddHandler Me.DataGridView1.CellPainting, AddressOf OnDgvCellPainting
+End Sub
+🔹 3. 自定义 CellPainting，仅对启用标签风格的列处理：
+vbnet
+复制
+编辑
+Private Sub OnDgvCellPainting(sender As Object, e As DataGridViewCellPaintingEventArgs)
+    If Not EnableLabelStyle Then Return
+
+    If e.RowIndex >= 0 AndAlso e.ColumnIndex = LabelColumnIndex Then
+        e.Handled = True
+        e.PaintBackground(e.CellBounds, True)
+
+        Dim text As String = e.FormattedValue?.ToString()
+        Dim backColor As Color = Color.LightGreen
+        Dim textColor As Color = Color.Black
+
+        Select Case text
+            Case "完了"
+                backColor = Color.Gray
+                textColor = Color.White
+            Case "异常"
+                backColor = Color.IndianRed
+                textColor = Color.White
+            Case "处理中"
+                backColor = Color.SteelBlue
+                textColor = Color.White
+        End Select
+
+        Dim rect As New Rectangle(e.CellBounds.X + 6, e.CellBounds.Y + 6,
+                                  e.CellBounds.Width - 12, e.CellBounds.Height - 12)
+
+        Dim radius As Integer = 10
+        Dim path As New Drawing2D.GraphicsPath()
+        path.AddArc(rect.Left, rect.Top, radius, radius, 180, 90)
+        path.AddArc(rect.Right - radius, rect.Top, radius, radius, 270, 90)
+        path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90)
+        path.AddArc(rect.Left, rect.Bottom - radius, radius, radius, 90, 90)
+        path.CloseFigure()
+
+        Using brush As New SolidBrush(backColor)
+            e.Graphics.FillPath(brush, path)
+        End Using
+
+        Dim sf As New StringFormat With {
+            .Alignment = StringAlignment.Center,
+            .LineAlignment = StringAlignment.Center
+        }
+
+        Using textBrush As New SolidBrush(textColor)
+            e.Graphics.DrawString(text, e.CellStyle.Font, textBrush, rect, sf)
+        End Using
+    End If
+End Sub
+✅ 使用方式（主窗体或其他页面调用）：
+vbnet
+复制
+编辑
+YourUserControl.EnableLabelStyle = True
+YourUserControl.LabelColumnIndex = 2
