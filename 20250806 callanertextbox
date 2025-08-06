@@ -1,3 +1,13 @@
+Dim topForm As Form = Me.FindForm()
+If topForm IsNot Nothing Then
+    calendar.Location = topForm.PointToClient(Me.PointToScreen(New Point(0, Me.Height)))
+    topForm.Controls.Add(calendar)
+    calendar.BringToFront()
+    calendar.Visible = True
+    calendarShown = True
+End If
+
+
 Public Sub New()
     Me.DoubleBuffered = True
     Me.Size = New Size(150, 30)
