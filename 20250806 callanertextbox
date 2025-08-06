@@ -1,0 +1,51 @@
+Public Class CalendarTextBox
+
+    Private WithEvents txtBox As New TextBox()
+    Private WithEvents calendar As New MonthCalendar()
+
+    Public Sub New()
+        ' 初始化控件
+        Me.Height = txtBox.Height
+        Me.Width = 150
+        Me.Controls.Add(txtBox)
+        Me.Controls.Add(calendar)
+
+        ' 初始隐藏日历
+        calendar.Visible = False
+        calendar.MaxSelectionCount = 1
+        calendar.ShowToday = True
+        calendar.BringToFront()
+
+        ' 日历位置稍微偏移，避免挡住文本框
+        calendar.Top = txtBox.Height
+        calendar.Left = 0
+    End Sub
+
+    ' 公开属性，用于访问文本
+    Public Property SelectedDate As DateTime
+        Get
+            Dim dt As DateTime
+            If DateTime.TryParse(txtBox.Text, dt) Then
+                Return dt
+            Else
+                Return DateTime.MinValue
+            End If
+        End Get
+        Set(value As DateTime)
+            txtBox.Text = value.ToString("yyyy-MM-dd")
+        End Set
+    End Property
+
+    ' 文本框双击，显示日历
+    Private Sub txtBox_DoubleClick(sender As Object, e As EventArgs) Handles txtBox.DoubleClick
+        calendar.Visible = True
+        calendar.BringToFront()
+    End Sub
+
+    ' 选择日期后写入并隐藏日历
+    Private Sub calendar_DateSelected(sender As Object, e As DateRangeEventArgs) Handles calendar.DateSelected
+        txtBox.Text = e.Start.ToString("yyyy-MM-dd")
+        calendar.Visible = False
+    End Sub
+
+End Class
