@@ -1,3 +1,52 @@
+Public Sub New()
+    Me.DoubleBuffered = True
+    Me.Size = New Size(150, 30)
+    Me.BackColor = Color.White
+
+    ' 设置内嵌 TextBox 属性
+    innerTextBox.BorderStyle = BorderStyle.None
+    innerTextBox.Location = New Point(10, 7)
+    innerTextBox.Width = Me.Width - 20
+    innerTextBox.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+    innerTextBox.Font = New Font("Segoe UI", 10)
+    innerTextBox.BackColor = Me.BackColor
+
+    Me.Controls.Add(innerTextBox)
+
+    ' 初始化 calendar
+    calendar.Visible = False
+    calendar.MaxSelectionCount = 1
+    calendar.ShowToday = True
+    AddHandler calendar.DateSelected, AddressOf Calendar_DateSelected
+End Sub
+
+
+
+Private Sub innerTextBox_DoubleClick(sender As Object, e As EventArgs) Handles innerTextBox.DoubleClick
+    If Not calendarShown Then
+        ShowCalendar()
+    End If
+End Sub
+
+Private Sub ShowCalendar()
+    calendar.Location = Me.Parent.PointToClient(Me.PointToScreen(New Point(0, Me.Height)))
+    calendarShown = True
+    Me.Parent.Controls.Add(calendar)
+    calendar.BringToFront()
+    calendar.Visible = True
+End Sub
+
+Private Sub Calendar_DateSelected(sender As Object, e As DateRangeEventArgs)
+    Me.Text = e.Start.ToString("yyyy-MM-dd")
+    calendar.Visible = False
+    calendarShown = False
+    Me.Parent.Controls.Remove(calendar)
+End Sub
+
+
+
+
+
 Public Class CalendarTextBox
 
     Private WithEvents txtBox As New TextBox()
