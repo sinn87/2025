@@ -1,0 +1,31 @@
+Private Sub ShowCalendar()
+    Dim topForm As Form = Me.FindForm()
+    If topForm IsNot Nothing Then
+        ' ===== 关键：设置可选范围 =====
+        If PairControl IsNot Nothing Then
+            Dim otherDate As DateTime
+            If DateTime.TryParse(PairControl.Text, otherDate) Then
+                If IsStartDate Then
+                    ' 开始日期 -> 最大值不能超过结束日期
+                    calendar.MaxDate = otherDate
+                    calendar.MinDate = DateTimePicker.MinimumDateTime
+                Else
+                    ' 结束日期 -> 最小值不能早于开始日期
+                    calendar.MinDate = otherDate
+                    calendar.MaxDate = DateTimePicker.MaximumDateTime
+                End If
+            Else
+                ' 如果另一边没选日期，就不限制
+                calendar.MinDate = DateTimePicker.MinimumDateTime
+                calendar.MaxDate = DateTimePicker.MaximumDateTime
+            End If
+        End If
+        ' =============================
+
+        calendar.Location = topForm.PointToClient(Me.PointToScreen(New Point(0, Me.Height)))
+        topForm.Controls.Add(calendar)
+        calendar.BringToFront()
+        calendar.Visible = True
+        calendarShown = True
+    End If
+End Sub
