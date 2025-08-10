@@ -1,0 +1,142 @@
+Imports System.Drawing
+Imports System.Drawing.Drawing2D
+Imports System.Windows.Forms
+
+Public Class RoundTextBox
+    Inherits UserControl
+
+    Private WithEvents innerTextBox As New TextBox()
+
+    ' 新增：角色（开始/结束）
+    Public Enum DateRole
+        StartDate
+        EndDate
+    End Enum
+    Public Property Role As DateRole
+
+    ' 新增：绑定的另一端日期控件
+    Public Property PairControl As RoundTextBox
+
+    Public Sub New()
+        Me.DoubleBuffered = True
+        Me.Size = New Size(150, 30)
+        Me.BackColor = Color.White
+
+        ' 设置内嵌 TextBox 属性
+        innerTextBox.BorderStyle = BorderStyle.None
+        innerTextBox.Location = New Point(10, 7)
+        innerTextBox.Width = Me.Width - 20
+        innerTextBox.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        innerTextBox.Font = New Font("Segoe UI", 10)
+        innerTextBox.BackColor = Me.BackColor
+        innerTextBox.Text = "" ' 初始为空
+
+        Me.Controls.Add(innerTextBox)
+    End Sub
+
+    ' 公开 Text 属性
+    Public Overrides Property Text As String
+        Get
+            Return innerTextBox.Text
+        End Get
+        Set(value As String)
+            innerTextBox.Text = value
+        End Set
+    End Property
+
+    ' 绘制圆角边框
+    Protected Overrides Sub OnPaint(e As PaintEventArgs)
+        MyBase.OnPaint(e)
+        Dim radius As Integer = 15
+        Dim rect As New Rectangle(0, 0, Me.Width - 1, Me.Height - 1)
+
+        Dim path As New GraphicsPath()
+        path.AddArc(rect.X, rect.Y, radius, radius, 180, 90)
+        path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90)
+        path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90)
+        path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90)
+        path.CloseFigure()
+
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias
+        Using pen As New Pen(Color.Gray, 1.5F)
+            e.Graphics.DrawPath(pen, path)
+        End Using
+    End Sub
+
+    ' 自动调整内嵌 TextBox 大小
+    Protected Overrides Sub OnResize(e As EventArgs)
+        MyBase.OnResize(e)
+        innerTextBox.Width = Me.Width - 20
+        innerTextBox.Height = Me.Height - 10
+    End Sub
+
+    ' 新增：离开时验证
+    Private Sub innerTextBox_Leave(sender As Object, e As EventArgs) Handles innerTextBox.Leave
+        ValidateWithPair()
+    End Sub
+
+    ' 验证逻辑
+    Private Sub ValidateWithPair()
+        If PairControl Is Nothing Then Return
+        Dim thisDate As DateTime
+        Dim pairDate As DateTime
+
+        Dim thisValid As Boolean = DateTime.TryParse(Me.Text, thisDate)
+        Dim pairValid As Boolean = DateTime.TryParse(PairControl.Text, pairDate)
+
+        If thisValid AndAlso pairValid Then
+            If Role = DateRole.StartDate AndAlso thisDate > pairDate Then
+                MessageBox.Show("开始日期不能晚于结束日期", "日期错误", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Me.Text = pairDate.ToString("yyyy-MM-dd")
+            ElseIf Role = DateRole.EndDate AndAlso thisDate < pairDate Then
+                MessageBox.Show("结束日期不能早于开始日期", "日期错误", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Me.Text = pairDate.ToString("yyyy-MM-dd")
+            End If
+        End If
+    End Sub
+End Class
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Private Sub ShowCalendar()
+    Dim topForm As Form = Me.FindForm()
+    If topForm IsNot Nothing Then
+        ' ===== 关键：设置可选范围 =====
+        If PairControl IsNot Nothing Then
+            Dim otherDate As DateTime
+            If DateTime.TryParse(PairControl.Text, otherDate) Then
+                If IsStartDate Then
+                    ' 开始日期 -> 最大值不能超过结束日期
+                    calendar.MaxDate = otherDate
+                    calendar.MinDate = DateTimePicker.MinimumDateTime
+                Else
+                    ' 结束日期 -> 最小值不能早于开始日期
+                    calendar.MinDate = otherDate
+                    calendar.MaxDate = DateTimePicker.MaximumDateTime
+                End If
+            Else
+                ' 如果另一边没选日期，就不限制
+                calendar.MinDate = DateTimePicker.MinimumDateTime
+                calendar.MaxDate = DateTimePicker.MaximumDateTime
+            End If
+        End If
+        ' =============================
+
+        calendar.Location = topForm.PointToClient(Me.PointToScreen(New Point(0, Me.Height)))
+        topForm.Controls.Add(calendar)
+        calendar.BringToFront()
+        calendar.Visible = True
+        calendarShown = True
+    End If
+End Sub
