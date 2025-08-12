@@ -7,6 +7,138 @@ Public Class RoundTextBox
 
     Private WithEvents innerTextBox As New TextBox()
 
+    ' 角色（开始 / 结束）
+    Public Enum DateRole
+        StartDateTime
+        EndDateTime
+    End Enum
+    Public Property Role As DateRole
+
+    ' 另一端的日期/时间控件
+    Public Property PairControl As RoundTextBox
+
+    ' 如果有单独的时间控件，指定它
+    Public Property TimeControl As RoundTextBox
+
+    Public Sub New()
+        Me.DoubleBuffered = True
+        Me.Size = New Size(150, 30)
+        Me.BackColor = Color.White
+
+        innerTextBox.BorderStyle = BorderStyle.None
+        innerTextBox.Location = New Point(10, 7)
+        innerTextBox.Width = Me.Width - 20
+        innerTextBox.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        innerTextBox.Font = New Font("Segoe UI", 10)
+        innerTextBox.BackColor = Me.BackColor
+        innerTextBox.Text = "" ' 初始为空
+
+        Me.Controls.Add(innerTextBox)
+    End Sub
+
+    Public Overrides Property Text As String
+        Get
+            Return innerTextBox.Text
+        End Get
+        Set(value As String)
+            innerTextBox.Text = value
+        End Set
+    End Property
+
+    Protected Overrides Sub OnPaint(e As PaintEventArgs)
+        MyBase.OnPaint(e)
+        Dim radius As Integer = 15
+        Dim rect As New Rectangle(0, 0, Me.Width - 1, Me.Height - 1)
+
+        Dim path As New GraphicsPath()
+        path.AddArc(rect.X, rect.Y, radius, radius, 180, 90)
+        path.AddArc(rect.Right - radius, rect.Y, radius, radius, 270, 90)
+        path.AddArc(rect.Right - radius, rect.Bottom - radius, radius, radius, 0, 90)
+        path.AddArc(rect.X, rect.Bottom - radius, radius, radius, 90, 90)
+        path.CloseFigure()
+
+        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias
+        Using pen As New Pen(Color.Gray, 1.5F)
+            e.Graphics.DrawPath(pen, path)
+        End Using
+    End Sub
+
+    Protected Overrides Sub OnResize(e As EventArgs)
+        MyBase.OnResize(e)
+        innerTextBox.Width = Me.Width - 20
+        innerTextBox.Height = Me.Height - 10
+    End Sub
+
+    ' 离开时做验证
+    Private Sub innerTextBox_Leave(sender As Object, e As EventArgs) Handles innerTextBox.Leave
+        ValidateWithPair()
+    End Sub
+
+    ' 获取完整 DateTime（本控件 + 对应时间控件）
+    Private Function GetFullDateTime() As DateTime?
+        Dim datePart As DateTime
+        Dim timePart As DateTime
+
+        ' 如果自己是时间控件
+        If TimeControl Is Nothing AndAlso DateTime.TryParse(Me.Text, datePart) Then
+            Return datePart
+        End If
+
+        ' 如果自己是日期控件
+        If DateTime.TryParse(Me.Text, datePart) Then
+            Dim timeText As String = If(TimeControl IsNot Nothing, TimeControl.Text, "00:00")
+            If DateTime.TryParse(timeText, timePart) Then
+                Return datePart.Date.Add(timePart.TimeOfDay)
+            End If
+            Return datePart
+        End If
+
+        Return Nothing
+    End Function
+
+    ' 验证逻辑
+    Private Sub ValidateWithPair()
+        If PairControl Is Nothing Then Return
+
+        Dim thisDT = GetFullDateTime()
+        Dim pairDT = PairControl.GetFullDateTime()
+
+        If thisDT.HasValue AndAlso pairDT.HasValue Then
+            If Role = DateRole.StartDateTime AndAlso thisDT.Value > pairDT.Value Then
+                MessageBox.Show("开始时间不能晚于结束时间", "时间错误", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Me.Text = pairDT.Value.ToString("yyyy-MM-dd")
+                If TimeControl IsNot Nothing Then
+                    TimeControl.Text = pairDT.Value.ToString("HH:mm")
+                End If
+            ElseIf Role = DateRole.EndDateTime AndAlso thisDT.Value < pairDT.Value Then
+                MessageBox.Show("结束时间不能早于开始时间", "时间错误", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Me.Text = pairDT.Value.ToString("yyyy-MM-dd")
+                If TimeControl IsNot Nothing Then
+                    TimeControl.Text = pairDT.Value.ToString("HH:mm")
+                End If
+            End If
+        End If
+    End Sub
+End Class
+
+
+
+
+
+
+
+
+
+
+Imports System.Drawing
+Imports System.Drawing.Drawing2D
+Imports System.Windows.Forms
+
+Public Class RoundTextBox
+    Inherits UserControl
+
+    Private WithEvents innerTextBox As New TextBox()
+
     ' 新增：角色（开始/结束）
     Public Enum DateRole
         StartDate
