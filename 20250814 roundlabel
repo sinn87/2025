@@ -1,3 +1,17 @@
+Private Function GetRoundedRect(rect As Rectangle, radius As Integer) As Drawing2D.GraphicsPath
+    radius = Math.Min(radius, Math.Min(rect.Width \ 2, rect.Height \ 2))
+    Dim path As New Drawing2D.GraphicsPath()
+    path.AddArc(rect.X, rect.Y, radius * 2, radius * 2, 180, 90) ' 左上
+    path.AddArc(rect.Right - radius * 2, rect.Y, radius * 2, radius * 2, 270, 90) ' 右上
+    path.AddArc(rect.Right - radius * 2, rect.Bottom - radius * 2, radius * 2, radius * 2, 0, 90) ' 右下
+    path.AddArc(rect.X, rect.Bottom - radius * 2, radius * 2, radius * 2, 90, 90) ' 左下
+    path.CloseFigure()
+    Return path
+End Function
+
+
+
+
 Public Class RoundedLabel
     Inherits UserControl
 
