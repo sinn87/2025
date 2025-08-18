@@ -1,6 +1,205 @@
 Imports System.Windows.Forms
 Imports System.Drawing
 
+'==============================================
+' 日期列（可空 + 多列独立 + 双击弹出日历）
+'==============================================
+Public Class DataGridViewCalendarColumn
+    Inherits DataGridViewColumn
+
+    Public Sub New()
+        MyBase.New(New DataGridViewCalendarCell())
+    End Sub
+
+    Public Overrides Property CellTemplate As DataGridViewCell
+        Get
+            Return MyBase.CellTemplate
+        End Get
+        Set(value As DataGridViewCell)
+            If value IsNot Nothing AndAlso Not TypeOf value Is DataGridViewCalendarCell Then
+                Throw New InvalidCastException("Cell must be of type DataGridViewCalendarCell")
+            End If
+            MyBase.CellTemplate = value
+        End Set
+    End Property
+End Class
+
+'==============================================
+' 单元格（告诉 DGV 要使用哪个编辑控件）
+'==============================================
+Public Class DataGridViewCalendarCell
+    Inherits DataGridViewTextBoxCell
+
+    Public Overrides Sub InitializeEditingControl(rowIndex As Integer, initialFormattedValue As Object, dataGridViewCellStyle As DataGridViewCellStyle)
+        MyBase.InitializeEditingControl(rowIndex, initialFormattedValue, dataGridViewCellStyle)
+        Dim ctl As CalendarEditingControl = CType(DataGridView.EditingControl, CalendarEditingControl)
+
+        If Me.Value Is Nothing OrElse IsDBNull(Me.Value) Then
+            ctl.Text = ""
+        Else
+            ctl.Text = Me.Value.ToString()
+        End If
+    End Sub
+
+    ' ← 这里告诉 DGV：编辑时使用 CalendarEditingControl（而不是 TextBox）
+    Public Overrides ReadOnly Property EditType As Type
+        Get
+            Return GetType(CalendarEditingControl)
+        End Get
+    End Property
+
+    Public Overrides ReadOnly Property ValueType As Type
+        Get
+            Return GetType(String)
+        End Get
+    End Property
+
+    Public Overrides ReadOnly Property DefaultNewRowValue As Object
+        Get
+            Return Nothing
+        End Get
+    End Property
+End Class
+
+'==============================================
+' 真正的编辑控件（单元格进入编辑模式后实际使用的 TextBox）
+'==============================================
+Public Class CalendarEditingControl
+    Inherits TextBox
+    Implements IDataGridViewEditingControl
+
+    Private grid As DataGridView
+    Private rowIndex As Integer
+    Private _valueChanged As Boolean
+
+    ' ← 每个单元格会创建自己的 MonthCalendar
+    Private WithEvents mc As MonthCalendar
+
+    Public Sub New()
+        Me.ReadOnly = True          ' 双击才能弹出日历
+    End Sub
+
+    ' ← 双击单元格时，弹出日期选择控件
+    Protected Overrides Sub OnDoubleClick(e As EventArgs)
+        MyBase.OnDoubleClick(e)
+
+        ' 第一次进入时创建
+        If mc Is Nothing Then
+            mc = New MonthCalendar()
+            mc.MaxSelectionCount = 1
+            mc.Visible = False
+            AddHandler mc.DateSelected, AddressOf Calendar_DateSelected
+        End If
+
+        Dim frm = grid.FindForm()
+        If mc.Parent IsNot frm Then
+            frm.Controls.Add(mc)
+        End If
+
+        ' ← 用当前单元格位置作为基准，定位日历
+        Dim cellRect = grid.GetCellDisplayRectangle(grid.CurrentCell.ColumnIndex, grid.CurrentCell.RowIndex, True)
+        Dim screenPt = grid.PointToScreen(New Point(cellRect.Left, cellRect.Bottom))
+        mc.Location = frm.PointToClient(screenPt)
+
+        mc.BringToFront()
+        mc.Visible = True
+    End Sub
+
+    ' ← 用户点击日历
+    Private Sub Calendar_DateSelected(sender As Object, e As DateRangeEventArgs)
+        Me.Text = e.Start.ToString("yyyy-MM-dd")
+        _valueChanged = True                   ' ← 标记已修改
+        mc.Visible = False
+        grid.NotifyCurrentCellDirty(True)      ' ← 告诉 DGV“当前值有变化”
+        grid.EndEdit()                         ' ← 提交编辑
+    End Sub
+
+    '---------------------------
+    ' IDataGridViewEditingControl
+    '---------------------------
+    Public Property EditingControlFormattedValue As Object Implements IDataGridViewEditingControl.EditingControlFormattedValue
+        Get
+            Return Me.Text
+        End Get
+        Set(value As Object)
+            Me.Text = If(value Is Nothing, "", value.ToString())
+        End Set
+    End Property
+
+    Public Function GetEditingControlFormattedValue(context As DataGridViewDataErrorContexts) As Object Implements IDataGridViewEditingControl.GetEditingControlFormattedValue
+        Return Me.Text
+    End Function
+
+    Public Sub ApplyCellStyleToEditingControl(style As DataGridViewCellStyle) Implements IDataGridViewEditingControl.ApplyCellStyleToEditingControl
+        Me.Font = style.Font
+    End Sub
+
+    Public Property EditingControlRowIndex As Integer Implements IDataGridViewEditingControl.EditingControlRowIndex
+        Get
+            Return rowIndex
+        End Get
+        Set(value As Integer)
+            rowIndex = value
+        End Set
+    End Property
+
+    Public Property EditingControlDataGridView As DataGridView Implements IDataGridViewEditingControl.EditingControlDataGridView
+        Get
+            Return grid
+        End Get
+        Set(value As DataGridView)
+            grid = value
+        End Set
+    End Property
+
+    Public Property EditingControlValueChanged As Boolean Implements IDataGridViewEditingControl.EditingControlValueChanged
+        Get
+            Return _valueChanged
+        End Get
+        Set(value As Boolean)
+            _valueChanged = value
+        End Set
+    End Property
+
+    Public ReadOnly Property RepositionEditingControlOnValueChange As Boolean Implements IDataGridViewEditingControl.RepositionEditingControlOnValueChange
+        Get
+            Return False
+        End Get
+    End Property
+
+    Public Function EditingControlWantsInputKey(keyData As Keys, dgvWantsInputKey As Boolean) As Boolean Implements IDataGridViewEditingControl.EditingControlWantsInputKey
+        Return True
+    End Function
+
+    Public Sub PrepareEditingControlForEdit(selectAll As Boolean) Implements IDataGridViewEditingControl.PrepareEditingControlForEdit
+        ' nothing
+    End Sub
+
+    Public ReadOnly Property EditingPanelCursor As Cursor Implements IDataGridViewEditingControl.EditingPanelCursor
+        Get
+            Return Cursors.Default
+        End Get
+    End Property
+
+End Class
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Imports System.Windows.Forms
+Imports System.Drawing
+
 ' -------------------------------
 ' 自定义日期列
 ' -------------------------------
