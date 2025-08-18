@@ -1,6 +1,76 @@
 Imports System.Windows.Forms
 Imports System.Drawing
 
+Public Class CalendarCell
+    Inherits DataGridViewTextBoxCell
+
+    ' 用于存放弹出的日历
+    Private Shared calendar As MonthCalendar = Nothing
+    Private Shared editingCell As DataGridViewCell = Nothing
+    Private Shared editingGrid As DataGridView = Nothing
+
+    ' 显示日历方法
+    Public Sub ShowCalendar(grid As DataGridView, rowIndex As Integer)
+        editingGrid = grid
+        editingCell = grid.Rows(rowIndex).Cells(Me.ColumnIndex)
+
+        ' 创建 MonthCalendar（共享一个实例即可）
+        If calendar Is Nothing Then
+            calendar = New MonthCalendar()
+            calendar.MaxSelectionCount = 1
+            AddHandler calendar.DateSelected, AddressOf Calendar_DateSelected
+        End If
+
+        ' 添加到窗体上（避免 TableLayoutPanel 裁剪）
+        Dim frm = grid.FindForm()
+        If calendar.Parent IsNot frm Then
+            frm.Controls.Add(calendar)
+        End If
+
+        ' 计算单元格在窗体上的位置
+        Dim rect = grid.GetCellDisplayRectangle(Me.ColumnIndex, rowIndex, True)
+        Dim screenPt = grid.PointToScreen(New Point(rect.Left, rect.Bottom))
+        calendar.Location = frm.PointToClient(screenPt)
+
+        calendar.Visible = True
+        calendar.BringToFront()
+    End Sub
+
+    ' 日期选择后写入单元格
+    Private Shared Sub Calendar_DateSelected(sender As Object, e As DateRangeEventArgs)
+        If editingCell IsNot Nothing Then
+            editingCell.Value = e.Start.ToString("yyyy-MM-dd")
+        End If
+
+        calendar.Visible = False
+        editingCell = Nothing
+        editingGrid = Nothing
+    End Sub
+
+    ' 可选：设置单元格类型
+    Public Overrides ReadOnly Property ValueType As Type
+        Get
+            Return GetType(String)
+        End Get
+    End Property
+
+    Public Overrides ReadOnly Property DefaultNewRowValue As Object
+        Get
+            Return Nothing
+        End Get
+    End Property
+End Class
+
+
+
+
+
+
+
+
+Imports System.Windows.Forms
+Imports System.Drawing
+
 '==============================================
 ' 日期列（可空 + 多列独立 + 双击弹出日历）
 '==============================================
