@@ -1,0 +1,45 @@
+Public Class DgvActionManager
+    Public Shared Sub HandleDoubleClick(pos As DgvPosition, dgv As DataGridView)
+        If dgv.CurrentRow Is Nothing Then Return
+
+        Select Case pos
+            Case DgvPosition.Page2_Dgv1
+                HandlePage2Dgv1(dgv)
+            Case DgvPosition.Page2_Dgv2
+                HandlePage2Dgv2(dgv)
+            Case DgvPosition.Page2_Dgv3
+                HandlePage2Dgv3(dgv)
+            Case DgvPosition.Page4_Dgv1
+                HandlePage4Dgv1(dgv)
+            Case DgvPosition.Page4_Dgv2
+                HandlePage4Dgv2(dgv)
+            Case DgvPosition.Page4_Dgv3
+                HandlePage4Dgv3(dgv)
+        End Select
+    End Sub
+
+    ' ===== 每个位置的具体逻辑 =====
+    Private Shared Sub HandlePage2Dgv1(dgv As DataGridView)
+        MessageBox.Show("Page2_Dgv1 的逻辑: 打开详情窗口")
+    End Sub
+
+    Private Shared Sub HandlePage2Dgv2(dgv As DataGridView)
+        MessageBox.Show("Page2_Dgv2 的逻辑: 导出数据")
+    End Sub
+
+    Private Shared Sub HandlePage2Dgv3(dgv As DataGridView)
+        MessageBox.Show("Page2_Dgv3 的逻辑: 统计汇总")
+    End Sub
+
+    Private Shared Sub HandlePage4Dgv1(dgv As DataGridView)
+        MessageBox.Show("Page4_Dgv1 的逻辑: 跳转到其他页")
+    End Sub
+
+    Private Shared Sub HandlePage4Dgv2(dgv As DataGridView)
+        MessageBox.Show("Page4_Dgv2 的逻辑: 编辑模式")
+    End Sub
+
+    Private Shared Sub HandlePage4Dgv3(dgv As DataGridView)
+        MessageBox.Show("Page4_Dgv3 的逻辑: 其他操作")
+    End Sub
+End Class
