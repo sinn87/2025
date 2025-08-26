@@ -1,0 +1,48 @@
+Protected Overrides Sub OnPaint(pe As PaintEventArgs)
+    pe.Graphics.SmoothingMode = SmoothingMode.AntiAlias
+
+    Dim rect = Me.ClientRectangle
+    Dim path = GetRoundedPath(rect, BorderRadius)
+
+    ' 圆角裁剪
+    Me.Region = New Region(path)
+
+    ' 背景绘制
+    If Me.Image IsNot Nothing Then
+        Select Case Me.SizeMode
+            Case PictureBoxSizeMode.StretchImage
+                pe.Graphics.DrawImage(Me.Image, rect)
+
+            Case PictureBoxSizeMode.Zoom
+                Dim imgRect As Rectangle
+                Dim ratioX As Double = rect.Width / Me.Image.Width
+                Dim ratioY As Double = rect.Height / Me.Image.Height
+                Dim ratio As Double = Math.Min(ratioX, ratioY)
+
+                Dim newWidth As Integer = CInt(Me.Image.Width * ratio)
+                Dim newHeight As Integer = CInt(Me.Image.Height * ratio)
+                imgRect = New Rectangle((rect.Width - newWidth) \ 2,
+                                        (rect.Height - newHeight) \ 2,
+                                        newWidth, newHeight)
+                pe.Graphics.DrawImage(Me.Image, imgRect)
+
+            Case PictureBoxSizeMode.CenterImage
+                Dim imgRect As New Rectangle((rect.Width - Me.Image.Width) \ 2,
+                                             (rect.Height - Me.Image.Height) \ 2,
+                                             Me.Image.Width, Me.Image.Height)
+                pe.Graphics.DrawImage(Me.Image, imgRect)
+
+            Case Else
+                pe.Graphics.DrawImage(Me.Image, rect)
+        End Select
+    Else
+        pe.Graphics.FillPath(New SolidBrush(Me.BackColor), path)
+    End If
+
+    ' 边框
+    If BorderWidth > 0 Then
+        Using pen As New Pen(BorderColor, BorderWidth)
+            pe.Graphics.DrawPath(pen, path)
+        End Using
+    End If
+End Sub
