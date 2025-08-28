@@ -1,0 +1,76 @@
+Imports System.Data.OleDb
+
+Public Class DbHelper
+
+    Private Shared connStr As String =
+        "Provider=Microsoft.ACE.OLEDB.12.0;" &
+        "Data Source=M:\...\Happiness.accdb;" &
+        "Mode=Share Deny None;" &
+        "Jet OLEDB:Database Locking Mode=1;"
+
+    ' 获取连接（统一处理连接错误）
+    Public Shared Function GetConnection() As OleDbConnection
+        Dim conn As New OleDbConnection(connStr)
+        Try
+            conn.Open()
+            Return conn
+        Catch ex As OleDbException
+            MessageBox.Show("データベースに接続できませんでした。" & vbCrLf &
+                            "別のユーザーが使用中の可能性があります。")
+            Return Nothing
+        Catch ex As Exception
+            MessageBox.Show("接続エラー: " & ex.Message)
+            Return Nothing
+        End Try
+    End Function
+
+    ' 执行查询，返回 DataTable
+    Public Shared Function ExecuteQuery(sql As String,
+                                        Optional params As List(Of OleDbParameter) = Nothing) As DataTable
+        Dim dt As New DataTable()
+        Using conn As OleDbConnection = GetConnection()
+            If conn Is Nothing Then Return dt
+
+            Try
+                Using cmd As New OleDbCommand(sql, conn)
+                    If params IsNot Nothing Then
+                        cmd.Parameters.AddRange(params.ToArray())
+                    End If
+
+                    Using adapter As New OleDbDataAdapter(cmd)
+                        adapter.Fill(dt)
+                    End Using
+                End Using
+            Catch ex As OleDbException
+                MessageBox.Show("クエリ実行エラー: " & ex.Message)
+            Catch ex As Exception
+                MessageBox.Show("不明なエラー: " & ex.Message)
+            End Try
+        End Using
+        Return dt
+    End Function
+
+    ' 执行更新（Insert/Update/Delete），返回影响的行数
+    Public Shared Function ExecuteNonQuery(sql As String,
+                                           Optional params As List(Of OleDbParameter) = Nothing) As Integer
+        Dim rowsAffected As Integer = 0
+        Using conn As OleDbConnection = GetConnection()
+            If conn Is Nothing Then Return 0
+
+            Try
+                Using cmd As New OleDbCommand(sql, conn)
+                    If params IsNot Nothing Then
+                        cmd.Parameters.AddRange(params.ToArray())
+                    End If
+                    rowsAffected = cmd.ExecuteNonQuery()
+                End Using
+            Catch ex As OleDbException
+                MessageBox.Show("更新処理に失敗しました: " & ex.Message)
+            Catch ex As Exception
+                MessageBox.Show("不明なエラー: " & ex.Message)
+            End Try
+        End Using
+        Return rowsAffected
+    End Function
+
+End Class
