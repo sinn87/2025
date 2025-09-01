@@ -1,0 +1,59 @@
+Imports System.Data.OleDb
+
+Public Class AccessHelper
+    Private Shared ReadOnly connStr As String =
+        $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={dbPath};"
+
+    ' 🔹 查询，返回 DataTable
+    Public Shared Function GetDataTable(sql As String, Optional params As OleDbParameter() = Nothing) As DataTable
+        Dim dt As New DataTable()
+        Try
+            Using conn As New OleDbConnection(connStr)
+                conn.Open()
+                Using cmd As New OleDbCommand(sql, conn)
+                    If params IsNot Nothing Then cmd.Parameters.AddRange(params)
+                    Using da As New OleDbDataAdapter(cmd)
+                        da.Fill(dt)
+                    End Using
+                End Using
+            End Using
+        Catch ex As OleDbException
+            Logger.LogError(ex, "SQL执行失败: " & sql)
+        End Try
+        Return dt
+    End Function
+
+    ' 🔹 查询单个值 (Integer, String, Date...)
+    Public Shared Function ExecuteScalar(sql As String, Optional params As OleDbParameter() = Nothing) As Object
+        Dim result As Object = Nothing
+        Try
+            Using conn As New OleDbConnection(connStr)
+                conn.Open()
+                Using cmd As New OleDbCommand(sql, conn)
+                    If params IsNot Nothing Then cmd.Parameters.AddRange(params)
+                    result = cmd.ExecuteScalar()
+                End Using
+            End Using
+        Catch ex As OleDbException
+            Logger.LogError(ex, "SQL执行失败: " & sql)
+        End Try
+        Return result
+    End Function
+
+    ' 🔹 执行 INSERT/UPDATE/DELETE
+    Public Shared Function ExecuteNonQuery(sql As String, Optional params As OleDbParameter() = Nothing) As Integer
+        Dim rows As Integer = 0
+        Try
+            Using conn As New OleDbConnection(connStr)
+                conn.Open()
+                Using cmd As New OleDbCommand(sql, conn)
+                    If params IsNot Nothing Then cmd.Parameters.AddRange(params)
+                    rows = cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        Catch ex As OleDbException
+            Logger.LogError(ex, "SQL执行失败: " & sql)
+        End Try
+        Return rows
+    End Function
+End Class
