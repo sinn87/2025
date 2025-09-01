@@ -56,4 +56,22 @@ Public Class AccessHelper
         End Try
         Return rows
     End Function
+
+
+Public Shared Sub ExecuteReader(sql As String, action As Action(Of OleDbDataReader), Optional params As OleDbParameter() = Nothing)
+    Using conn As New OleDbConnection(connStr)
+        Using cmd As New OleDbCommand(sql, conn)
+            If params IsNot Nothing AndAlso params.Length > 0 Then
+                cmd.Parameters.AddRange(params)
+            End If
+            conn.Open()
+            Using reader As OleDbDataReader = cmd.ExecuteReader()
+                action(reader)   ' 🔹 把处理逻辑交给调用方
+            End Using
+        End Using
+    End Using
+End Sub
+
+
+
 End Class
