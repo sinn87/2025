@@ -1,0 +1,24 @@
+Namespace My
+    Partial Friend Class MyApplication
+        Private Shared appMutex As Threading.Mutex
+
+        Protected Overrides Function OnStartup(ByVal e As ApplicationServices.StartupEventArgs) As Boolean
+            Dim createdNew As Boolean
+
+#If DEBUG Then
+            Dim mutexName As String = "MyApp_Debug_Instance"
+#Else
+            Dim mutexName As String = "MyApp_Release_Instance"
+#End If
+
+            appMutex = New Threading.Mutex(True, mutexName, createdNew)
+
+            If Not createdNew Then
+                MessageBox.Show("程序已经在运行中。", "提示")
+                Return False  ' 阻止继续启动
+            End If
+
+            Return MyBase.OnStartup(e)
+        End Function
+    End Class
+End Namespace
