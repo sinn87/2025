@@ -1,3 +1,23 @@
+Private Shared Function IsDatabaseConnectivityError(ex As OleDbException) As Boolean
+    Dim msg As String = ex.Message
+
+    ' 🔹 よくある Access の接続失敗エラーメッセージ
+    If msg.Contains("ファイルはロックされている") _
+        OrElse msg.Contains("ファイルはすでに別のユーザーによって使用されています") _
+        OrElse msg.Contains("データベースを開くことができません") _
+        OrElse msg.Contains("データベースが見つかりません") _
+        OrElse msg.Contains("データ ソースが見つかりません") _
+        OrElse msg.Contains("プロバイダーを見つけられません") Then
+        Return True
+    End If
+
+    Return False
+End Function
+
+
+
+
+
 ' データベース例外：ユーザーに再試行を促す
 If TypeOf e.Exception Is OleDbException Then
     MessageBox.Show("データベースに一時的にアクセスできません。しばらくしてから再試行してください。", "エラー")
