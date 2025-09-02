@@ -1,3 +1,16 @@
+' データベース例外：ユーザーに再試行を促す
+If TypeOf e.Exception Is OleDbException Then
+    MessageBox.Show("データベースに一時的にアクセスできません。しばらくしてから再試行してください。", "エラー")
+    e.ExitApplication = False  ' ❗プログラムが直接終了しないようにする
+Else
+    ' その他の例外：記録してから終了
+    MessageBox.Show("システムエラーが発生しました。管理者に連絡してください。", "重大なエラー")
+    e.ExitApplication = True
+End If
+
+
+
+
 Imports System.Data.OleDb
 
 Public Class AccessHelper
