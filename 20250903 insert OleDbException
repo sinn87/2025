@@ -1,0 +1,75 @@
+Public Class AccessHelper
+
+    Private Shared connStr As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=yourdb.accdb;"
+
+    ' 判断是否为数据库环境问题（锁冲突/文件不存在等）
+    Private Shared Function IsDatabaseConnectivityError(ex As OleDbException) As Boolean
+        Dim msg As String = ex.Message
+        If msg.Contains("ファイルはロックされている") _
+           OrElse msg.Contains("ファイルはすでに別のユーザーによって使用されています") _
+           OrElse msg.Contains("データベースを開くことができません") _
+           OrElse msg.Contains("データベースが見つかりません") _
+           OrElse msg.Contains("データ ソースが見つかりません") Then
+            Return True
+        End If
+        Return False
+    End Function
+
+    ''' <summary>
+    ''' 通用写入函数
+    ''' 返回：
+    '''  1 : 成功
+    ''' -1 : 程序内部错误
+    ''' -4 : 数据库锁冲突/无法连接
+    ''' </summary>
+    Public Shared Function ExecuteNonQuerySafe(sql As String, Optional params As OleDbParameter() = Nothing) As Integer
+        Try
+            Using conn As New OleDbConnection(connStr)
+                conn.Open()
+                Using transaction = conn.BeginTransaction()
+                    Try
+                        Using cmd As New OleDbCommand(sql, conn, transaction)
+                            If params IsNot Nothing Then cmd.Parameters.AddRange(params)
+                            cmd.ExecuteNonQuery()
+                        End Using
+
+                        transaction.Commit()
+                        Return 1 ' 成功
+
+                    Catch ex As OleDbException
+                        ' 数据库锁/文件锁/环境问题
+                        If IsDatabaseConnectivityError(ex) Then
+                            Logger.LogError(ex, "DB書き込み失敗: " & sql)
+                            Try
+                                transaction.Rollback()
+                            Catch
+                                ' Rollback 再失败也忽略
+                            End Try
+                            Return -4
+                        Else
+                            Try
+                                transaction.Rollback()
+                            Catch
+                            End Try
+                            Throw ' SQL/参数错误 → 程序 bug
+                        End If
+
+                    Catch ex As Exception
+                        Logger.LogError(ex, "内部エラー: " & sql)
+                        Try
+                            transaction.Rollback()
+                        Catch
+                        End Try
+                        Return -1
+                    End Try
+                End Using
+            End Using
+
+        Catch ex As Exception
+            ' 最外层兜底，防止连接异常或 BeginTransaction 失败
+            Logger.LogError(ex, "最外层未捕获异常: " & sql)
+            Return -1
+        End Try
+    End Function
+
+End Class
