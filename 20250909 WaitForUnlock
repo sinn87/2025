@@ -1,0 +1,14 @@
+Private Function WaitForUnlock(dbPath As String, Optional timeoutMs As Integer = 5000) As Boolean
+    Dim lockFile = IO.Path.ChangeExtension(dbPath, ".laccdb")
+    Dim sw As Stopwatch = Stopwatch.StartNew()
+
+    While IO.File.Exists(lockFile)
+        ' 超过等待时间就放弃
+        If sw.ElapsedMilliseconds > timeoutMs Then
+            Return False
+        End If
+        Threading.Thread.Sleep(200) ' 等 0.2 秒再试
+    End While
+
+    Return True
+End Function
