@@ -12,3 +12,65 @@ Public Class DbResult(Of T)
         Me.Exception = ex
     End Sub
 End Class
+
+
+
+Public Shared Function ExecuteReader(sql As String,
+                                     action As Action(Of OleDbDataReader),
+                                     Optional params As OleDbParameter() = Nothing) As DbResult(Of Boolean)
+    Try
+        Using conn As New OleDbConnection(connStr)
+            Using cmd As New OleDbCommand(sql, conn)
+                If params IsNot Nothing AndAlso params.Length > 0 Then
+                    cmd.Parameters.AddRange(params)
+                End If
+                conn.Open()
+                Using reader As OleDbDataReader = cmd.ExecuteReader()
+                    action(reader)   ' 🔹 把处理逻辑交给调用方
+                End Using
+            End Using
+        End Using
+        Return New DbResult(Of Boolean)(True, True)
+    Catch ex As Exception
+        Return New DbResult(Of Boolean)(False, False, ex.Message, ex)
+    End Try
+End Function
+
+ExecuteScalar → 单值结果
+
+Public Shared Function ExecuteScalar(Of T)(sql As String,
+                                           Optional params As OleDbParameter() = Nothing) As DbResult(Of T)
+    Try
+        Using conn As New OleDbConnection(connStr)
+            Using cmd As New OleDbCommand(sql, conn)
+                If params IsNot Nothing AndAlso params.Length > 0 Then
+                    cmd.Parameters.AddRange(params)
+                End If
+                conn.Open()
+                Dim value = CType(cmd.ExecuteScalar(), T)
+                Return New DbResult(Of T)(True, value)
+            End Using
+        End Using
+    Catch ex As Exception
+        Return New DbResult(Of T)(False, Nothing, ex.Message, ex)
+    End Try
+End Function
+
+ExecuteNonQuery → 返回受影响行数
+Public Shared Function ExecuteNonQuery(sql As String,
+                                       Optional params As OleDbParameter() = Nothing) As DbResult(Of Integer)
+    Try
+        Using conn As New OleDbConnection(connStr)
+            Using cmd As New OleDbCommand(sql, conn)
+                If params IsNot Nothing AndAlso params.Length > 0 Then
+                    cmd.Parameters.AddRange(params)
+                End If
+                conn.Open()
+                Dim count = cmd.ExecuteNonQuery()
+                Return New DbResult(Of Integer)(True, count)
+            End Using
+        End Using
+    Catch ex As Exception
+        Return New DbResult(Of Integer)(False, -1, ex.Message, ex)
+    End Try
+End Function
