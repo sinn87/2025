@@ -1,0 +1,14 @@
+' すべてのデータベース操作の結果をカプセル化するクラス
+Public Class DbResult(Of T)
+    Public Property Success As Boolean     ' 成功したかどうか
+    Public Property Data As T              ' 戻り値データ（DataTable / List / 任意の型）
+    Public Property ErrorMessage As String ' エラーメッセージ（任意）
+    Public Property Exception As Exception ' 例外オブジェクト（任意）
+
+    Public Sub New(success As Boolean, Optional data As T = Nothing, Optional err As String = Nothing, Optional ex As Exception = Nothing)
+        Me.Success = success
+        Me.Data = data
+        Me.ErrorMessage = err
+        Me.Exception = ex
+    End Sub
+End Class
