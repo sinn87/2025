@@ -1,0 +1,154 @@
+Private Sub btnCheckCases_Click(sender As Object, e As EventArgs) Handles btnCheckCases.Click
+    Dim filter As New CaseFilter(connStr)
+    Dim cases As List(Of CaseItem) = LoadCases() ' 自己的方法获取案件列表
+    Dim eligibleCases As New List(Of CaseItem)
+    Dim msg As New System.Text.StringBuilder()
+
+    Using conn As New SqlConnection(connStr)
+        conn.Open()
+        For Each c In cases
+            ' 前三条规则 + 类型日期
+            If filter.IsEligible(conn, c) Then
+                ' 检查 Tab
+                Dim tabs = filter.CheckTabs(conn, c.CaseID)
+                c.IncompleteTabs = tabs
+                eligibleCases.Add(c)
+
+                ' 如果有未完成 Tab，就生成提示文本
+                If tabs.Count > 0 Then
+                    msg.AppendLine($"案件 {c.Name} 未完成的 Tab: {String.Join(", ", tabs)}")
+                End If
+            End If
+        Next
+    End Using
+
+    If msg.Length > 0 Then
+        MessageBox.Show(msg.ToString(), "提醒", MessageBoxButtons.OK, MessageBoxIcon.Information)
+    Else
+        ' 全部通过 → eligibleCases 就是你要返回的数组
+        ' 页面可以直接用 eligibleCases
+    End If
+End Sub
+
+
+
+
+
+
+
+
+Public Class CaseItem
+    Public Property CaseID As Integer
+    Public Property Category As String
+    Public Property Name As String
+    Public Property Period As String
+    Public Property CaseType As String ' IPO / PO / 其他
+End Class
+
+
+
+
+
+
+Imports System.Data.SqlClient
+
+Public Class CaseFilter
+    Private connStr As String
+
+    Public Sub New(connectionString As String)
+        connStr = connectionString
+    End Sub
+
+    Public Function GetEligibleCases(cases As List(Of CaseItem)) As CaseItem()
+        Dim result As New List(Of CaseItem)
+        Using conn As New SqlConnection(connStr)
+            conn.Open()
+            For Each c In cases
+                If IsEligible(conn, c) Then
+                    result.Add(c)
+                End If
+            Next
+        End Using
+        Return result.ToArray()
+    End Function
+
+    Private Function IsEligible(conn As SqlConnection, caseItem As CaseItem) As Boolean
+        Dim caseID = caseItem.CaseID
+
+        If Not CheckT100(conn, caseID) Then Return False
+        If Not CheckT300(conn, caseID) Then Return False
+        If Not CheckT110(conn, caseID) Then Return False
+        If Not CheckTypeDate(conn, caseItem) Then Return False
+
+        Return True
+    End Function
+
+    ' ---------------- 单独规则方法 ----------------
+
+    Private Function CheckT100(conn As SqlConnection, caseID As Integer) As Boolean
+        Using cmd As New SqlCommand("SELECT a, b FROM t100 WHERE CaseID=@CaseID", conn)
+            cmd.Parameters.AddWithValue("@CaseID", caseID)
+            Using reader = cmd.ExecuteReader()
+                If reader.Read() Then
+                    If reader.GetInt32(0) = 1 OrElse reader.GetInt32(1) = 1 Then Return False
+                End If
+            End Using
+        End Using
+        Return True
+    End Function
+
+    Private Function CheckT300(conn As SqlConnection, caseID As Integer) As Boolean
+        Using cmd As New SqlCommand("SELECT COUNT(*) FROM t300 WHERE CaseID=@CaseID AND c=1", conn)
+            cmd.Parameters.AddWithValue("@CaseID", caseID)
+            Dim count = Convert.ToInt32(cmd.ExecuteScalar())
+            Return count > 0
+        End Using
+    End Function
+
+    Private Function CheckT110(conn As SqlConnection, caseID As Integer) As Boolean
+        Using cmd As New SqlCommand("SELECT Value FROM t110 WHERE CaseID=@CaseID AND ProjectID=139", conn)
+            cmd.Parameters.AddWithValue("@CaseID", caseID)
+            Using reader = cmd.ExecuteReader()
+                If reader.Read() AndAlso reader.GetInt32(0) = 1 Then Return False
+            End Using
+        End Using
+        Return True
+    End Function
+
+    ' ---------------- 类型+日期规则 ----------------
+    Private Function CheckTypeDate(conn As SqlConnection, caseItem As CaseItem) As Boolean
+Private Function CheckTypeDate(conn As SqlConnection, caseItem As CaseItem) As Boolean
+    Dim upperID As Integer
+    Dim lowerID As Integer
+
+    Select Case caseItem.CaseType.ToUpper()
+        Case "IPO"
+            lowerID = 30
+            upperID = 19
+        Case "PO"
+            lowerID = 24
+            upperID = 19
+        Case Else
+            Return True ' 其他类型不判断
+    End Select
+
+    Using cmd As New SqlCommand("
+        SELECT COUNT(*) 
+        FROM t110
+        WHERE CaseID=@CaseID
+          AND ProjectID IN (@UpperID, @LowerID)
+          AND ((ProjectID=@UpperID AND Value > GETDATE()) 
+               OR (ProjectID=@LowerID AND Value < GETDATE()))
+    ", conn)
+        cmd.Parameters.AddWithValue("@CaseID", caseItem.CaseID)
+        cmd.Parameters.AddWithValue("@UpperID", upperID)
+        cmd.Parameters.AddWithValue("@LowerID", lowerID)
+        Dim count = Convert.ToInt32(cmd.ExecuteScalar())
+        Return count = 2
+    End Using
+End Function
+
+End Class
+
+
+
