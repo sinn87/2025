@@ -1,15 +1,37 @@
-' 模块名：Module1
-Public Sub FillData(ByVal arr As Variant)
+' ====== 模板端 VBA ======
+Public Sub FillAndExport(ByVal arr As Variant)
     Dim ws As Worksheet
     Set ws = ThisWorkbook.Sheets(1)
 
+    ' 写入数据
     Dim r As Long, c As Long
     For r = LBound(arr, 1) To UBound(arr, 1)
         For c = LBound(arr, 2) To UBound(arr, 2)
             ws.Cells(r, c).Value = arr(r, c)
         Next c
     Next r
+
+    ' 生成文件名
+    Dim savePathXlsx As String
+    Dim savePathPdf As String
+    savePathXlsx = ThisWorkbook.Path & "\Report_" & Format(Now, "yyyymmdd_hhnnss") & ".xlsx"
+    savePathPdf = ThisWorkbook.Path & "\Report_" & Format(Now, "yyyymmdd_hhnnss") & ".pdf"
+
+    ' 另存为 Excel
+    ThisWorkbook.SaveCopyAs savePathXlsx
+
+    ' 导出 PDF
+    ws.ExportAsFixedFormat _
+        Type:=xlTypePDF, _
+        Filename:=savePathPdf, _
+        Quality:=xlQualityStandard, _
+        IncludeDocProperties:=True, _
+        IgnorePrintAreas:=False, _
+        OpenAfterPublish:=False
+
+    MsgBox "数据导出完成！" & vbCrLf & savePathXlsx & vbCrLf & savePathPdf
 End Sub
+
 
 
 Imports Microsoft.Office.Interop
