@@ -1,0 +1,47 @@
+' 模块名：Module1
+Public Sub FillData(ByVal arr As Variant)
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets(1)
+
+    Dim r As Long, c As Long
+    For r = LBound(arr, 1) To UBound(arr, 1)
+        For c = LBound(arr, 2) To UBound(arr, 2)
+            ws.Cells(r, c).Value = arr(r, c)
+        Next c
+    Next r
+End Sub
+
+
+Imports Microsoft.Office.Interop
+Imports System.Runtime.InteropServices
+
+Module Module1
+    Sub Main()
+        Dim templatePath As String = "C:\Users\you\Documents\report_template.xltm"
+
+        ' 准备 VB.NET 侧的二维数组
+        Dim data(,) As Object = {
+            {"编号", "名称", "金额"},
+            {1, "苹果", 100},
+            {2, "香蕉", 200},
+            {3, "樱桃", 300}
+        }
+
+        ' 启动 Excel
+        Dim xlApp As New Excel.Application
+        xlApp.Visible = True
+
+        ' 打开模板
+        Dim xlBook As Excel.Workbook = xlApp.Workbooks.Add(templatePath)
+
+        ' 运行模板中的宏 (宏名区分大小写不敏感)
+        xlApp.Run("FillData", data)
+
+        ' （可选）保存或关闭
+        ' xlBook.SaveAs("C:\Users\you\Documents\output.xlsx")
+        ' xlBook.Close(SaveChanges:=True)
+        ' xlApp.Quit()
+        ' Marshal.ReleaseComObject(xlBook)
+        ' Marshal.ReleaseComObject(xlApp)
+    End Sub
+End Module
