@@ -1,0 +1,13 @@
+Private Function ConvertListTo2DArray(list As List(Of String())) As Object(,)
+    If list Is Nothing OrElse list.Count = 0 Then Return New Object(0, 0) {}
+    Dim rowCount As Integer = list.Count
+    Dim colCount As Integer = list(0).Length
+    Dim result(rowCount - 1, colCount - 1) As Object
+
+    For i = 0 To rowCount - 1
+        For j = 0 To colCount - 1
+            result(i, j) = list(i)(j)
+        Next
+    Next
+    Return result
+End Function
