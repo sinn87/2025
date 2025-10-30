@@ -1,0 +1,158 @@
+Option Explicit
+
+' ============ 主入口 ============
+Public Sub FillCaseData(ByVal arr As Variant)
+    Dim normalData As Variant, specialData As Variant
+    Dim normalPages As Long, specialPages As Long
+    
+    ' 性能优化
+    OptimizePerformance True
+    
+    On Error GoTo CleanExit
+    
+    ' 1️⃣ 数据分类
+    SplitCaseData arr, normalData, specialData
+    
+    ' 2️⃣ 计算页数
+    normalPages = CalcPageCount(normalData, 7)
+    specialPages = CalcPageCount(specialData, 4)
+    
+    ' 3️⃣ 生成普通案件页
+    If Not IsEmpty(normalData) Then
+        CreateAndFillPages normalData, "模板_普通案件", 20, 7, normalPages
+    End If
+    
+    ' 4️⃣ 生成特殊案件页
+    If Not IsEmpty(specialData) Then
+        CreateAndFillPages specialData, "模板_特殊案件", 21, 4, specialPages
+    End If
+    
+    MsgBox "Excel 已生成完毕！", vbInformation
+
+CleanExit:
+    ' 恢复性能设置
+    OptimizePerformance False
+End Sub
+
+
+' ============ 性能优化 ============
+Private Sub OptimizePerformance(ByVal enableFastMode As Boolean)
+    If enableFastMode Then
+        Application.ScreenUpdating = False
+        Application.Calculation = xlCalculationManual
+        Application.EnableEvents = False
+    Else
+        Application.ScreenUpdating = True
+        Application.Calculation = xlCalculationAutomatic
+        Application.EnableEvents = True
+    End If
+End Sub
+
+
+' ============ 数据分类（第8列：类型） ============
+Private Sub SplitCaseData(ByVal arr As Variant, _
+                          ByRef normalData As Variant, _
+                          ByRef specialData As Variant)
+    Dim i As Long, n1 As Long, n2 As Long
+    Dim tmpNormal() As Variant, tmpSpecial() As Variant
+    Dim cols As Long: cols = UBound(arr, 2)
+    
+    ReDim tmpNormal(1 To UBound(arr, 1), 1 To cols)
+    ReDim tmpSpecial(1 To UBound(arr, 1), 1 To cols)
+    
+    For i = LBound(arr, 1) To UBound(arr, 1)
+        If arr(i, 8) = "普通" Then
+            n1 = n1 + 1
+            tmpNormal(n1, 1) = arr(i, 1)
+            tmpNormal(n1, 2) = arr(i, 2)
+            tmpNormal(n1, 3) = arr(i, 3)
+            tmpNormal(n1, 4) = arr(i, 4)
+            tmpNormal(n1, 5) = arr(i, 5)
+            tmpNormal(n1, 6) = arr(i, 6)
+            tmpNormal(n1, 7) = arr(i, 7)
+            tmpNormal(n1, 8) = arr(i, 9) ' 普通案件注释
+        ElseIf arr(i, 8) = "特殊" Then
+            n2 = n2 + 1
+            tmpSpecial(n2, 1) = arr(i, 1)
+            tmpSpecial(n2, 2) = arr(i, 2)
+            tmpSpecial(n2, 3) = arr(i, 3)
+            tmpSpecial(n2, 4) = arr(i, 4)
+            tmpSpecial(n2, 5) = arr(i, 5)
+            tmpSpecial(n2, 6) = arr(i, 6)
+            tmpSpecial(n2, 7) = arr(i, 7)
+            tmpSpecial(n2, 8) = arr(i, 10) ' 特殊案件注释
+        End If
+    Next i
+    
+    If n1 > 0 Then ReDim Preserve tmpNormal(1 To n1, 1 To cols): normalData = tmpNormal
+    If n2 > 0 Then ReDim Preserve tmpSpecial(1 To n2, 1 To cols): specialData = tmpSpecial
+End Sub
+
+
+' ============ 计算页数（考虑注释多占一行） ============
+Private Function CalcPageCount(ByVal data As Variant, ByVal rowsPerPage As Long) As Long
+    If IsEmpty(data) Then CalcPageCount = 0: Exit Function
+    Dim i As Long, logicalRows As Long
+    logicalRows = 0
+    For i = LBound(data, 1) To UBound(data, 1)
+        logicalRows = logicalRows + 1
+        If Trim(data(i, 8)) <> "" Then logicalRows = logicalRows + 1
+    Next i
+    CalcPageCount = Application.Ceiling(logicalRows / rowsPerPage, 1)
+End Function
+
+
+' ============ 生成并填充页面 ============
+Private Sub CreateAndFillPages(ByVal data As Variant, _
+                               ByVal templateName As String, _
+                               ByVal startRow As Long, _
+                               ByVal rowsPerPage As Long, _
+                               ByVal pageCount As Long)
+    Dim wsTemplate As Worksheet, ws As Worksheet
+    Dim i As Long, currentPage As Long, usedRows As Long, nextRow As Long
+    
+    Set wsTemplate = ThisWorkbook.Sheets(templateName)
+    
+    ' 复制附加页
+    Dim j As Long
+    For j = 2 To pageCount
+        wsTemplate.Copy After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count)
+        ActiveSheet.Name = templateName & (j - 1)
+    Next j
+    
+    currentPage = 1
+    usedRows = 0
+    nextRow = startRow
+    Set ws = wsTemplate
+    
+    For i = LBound(data, 1) To UBound(data, 1)
+        Dim rowNeed As Long
+        rowNeed = 1
+        If Trim(data(i, 8)) <> "" Then rowNeed = 2
+        
+        ' 当前页放不下 → 切换新页
+        If usedRows + rowNeed > rowsPerPage Then
+            currentPage = currentPage + 1
+            Set ws = ThisWorkbook.Sheets(templateName & (currentPage - 1))
+            usedRows = 0
+            nextRow = startRow
+        End If
+        
+        ' 写入前7列数据
+        ws.Range("B" & nextRow).Resize(1, 7).Value = Application.Index(data, i, Array(1, 2, 3, 4, 5, 6, 7))
+        usedRows = usedRows + 1
+        nextRow = nextRow + 1
+        
+        ' 写注释（单独行）
+        If Trim(data(i, 8)) <> "" Then
+            With ws.Range("B" & nextRow & ":H" & nextRow)
+                .Merge
+                .Value = data(i, 8)
+                .HorizontalAlignment = xlCenter
+                .VerticalAlignment = xlCenter
+            End With
+            usedRows = usedRows + 1
+            nextRow = nextRow + 1
+        End If
+    Next i
+End Sub
