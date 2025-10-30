@@ -1,0 +1,170 @@
+Option Explicit
+
+' ============ 主入口 ============
+Public Sub FillCaseData(ByVal arr As Variant)
+    Dim normalData As Variant, specialData As Variant
+
+    ' --- 整理数据 ---
+    Call SplitData(arr, normalData, specialData)
+
+    ' --- 计算页数 ---
+    Dim normalPages As Long, specialPages As Long
+    normalPages = CalcPages(normalData, 7)
+    specialPages = CalcPages(specialData, 4)
+
+    ' --- 复制模板页 ---
+    Call PrepareSheets("普通案件", normalPages)
+    Call PrepareSheets("特殊案件", specialPages)
+
+    ' --- 粘贴数据 ---
+    Call PasteData(normalData, "普通案件", 7, "B20")
+    Call PasteData(specialData, "特殊案件", 4, "B21")
+
+    MsgBox "Excel 数据已填入完毕！", vbInformation
+End Sub
+
+
+' ============ 数据拆分 ============
+Private Sub SplitData(ByVal arr As Variant, ByRef normalData As Variant, ByRef specialData As Variant)
+    Dim tmpNormal As Collection, tmpSpecial As Collection
+    Set tmpNormal = New Collection
+    Set tmpSpecial = New Collection
+
+    Dim i As Long
+    For i = LBound(arr, 1) To UBound(arr, 1)
+        Dim mainData(1 To 8) As Variant
+        Dim j As Long
+        For j = 1 To 7
+            mainData(j) = arr(i, j)
+        Next j
+
+        Select Case arr(i, 8)
+            Case "普通"
+                mainData(8) = arr(i, 9)
+                tmpNormal.Add mainData
+            Case "特殊"
+                mainData(8) = arr(i, 10)
+                tmpSpecial.Add mainData
+        End Select
+    Next i
+
+    normalData = CollectionToArray(tmpNormal)
+    specialData = CollectionToArray(tmpSpecial)
+End Sub
+
+
+' ============ Collection 转二维数组 ============
+Private Function CollectionToArray(col As Collection) As Variant
+    If col.Count = 0 Then
+        CollectionToArray = Empty
+        Exit Function
+    End If
+
+    Dim rowCount As Long, colCount As Long
+    rowCount = col.Count
+    colCount = UBound(col(1))
+    Dim arr() As Variant
+    ReDim arr(1 To rowCount, 1 To colCount)
+
+    Dim i As Long, j As Long
+    For i = 1 To rowCount
+        For j = 1 To colCount
+            arr(i, j) = col(i)(j)
+        Next j
+    Next i
+
+    CollectionToArray = arr
+End Function
+
+
+' ============ 页数计算 ============
+Private Function CalcPages(data As Variant, rowsPerPage As Long) As Long
+    If IsEmpty(data) Then
+        CalcPages = 0
+    Else
+        CalcPages = Application.WorksheetFunction.RoundUp(UBound(data, 1) / rowsPerPage, 0)
+    End If
+End Function
+
+
+' ============ 复制模板页 ============
+Private Sub PrepareSheets(baseName As String, pageCount As Long)
+    Dim i As Long
+    For i = 1 To pageCount
+        ThisWorkbook.Sheets(baseName).Copy After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count)
+        ActiveSheet.Name = baseName & "_" & i
+    Next i
+End Sub
+
+
+' ============ 粘贴数据 ============
+Private Sub PasteData(data As Variant, baseName As String, rowsPerPage As Long, startCell As String)
+    If IsEmpty(data) Then Exit Sub
+
+    Dim totalRows As Long
+    totalRows = UBound(data, 1)
+
+    Dim pageIndex As Long, startRow As Long, endRow As Long
+    Dim ws As Worksheet
+    Dim i As Long
+
+    pageIndex = 1
+
+    For startRow = 1 To totalRows Step rowsPerPage
+        endRow = Application.Min(startRow + rowsPerPage - 1, totalRows)
+        Set ws = ThisWorkbook.Sheets(baseName & "_" & pageIndex)
+
+        Dim pasteRange As Range
+        Set pasteRange = ws.Range(startCell).Resize(endRow - startRow + 1, 7)
+        pasteRange.Value = WorksheetFunction.Index(data, Evaluate("ROW(" & startRow & ":" & endRow & ")"), Array(1, 2, 3, 4, 5, 6, 7))
+
+        ' --- 调整蓝框 ---
+        Call ExtendBlueFrame(ws, pasteRange)
+
+        ' --- 处理注释 ---
+        For i = startRow To endRow
+            If data(i, 8) <> "" Then
+                Dim noteRow As Long
+                noteRow = pasteRange.Row + (i - startRow) ' 对应行下方一行
+                With ws.Range("B" & noteRow + 1)
+                    .Value = data(i, 8)
+                    .HorizontalAlignment = xlCenter
+                    .VerticalAlignment = xlCenter
+                    .Font.Italic = True
+                End With
+            End If
+        Next i
+
+        pageIndex = pageIndex + 1
+    Next
+End Sub
+
+
+' ============ 扩展蓝框边界 ============
+Private Sub ExtendBlueFrame(ws As Worksheet, pasteRange As Range)
+    ' 蓝框假设为粘贴区域周边的边框
+    ' 若新增行超过原蓝框，则复制最后一行的边框样式
+    Dim lastRow As Long
+    lastRow = pasteRange.Row + pasteRange.Rows.Count - 1
+
+    Dim frameBottom As Range
+    Set frameBottom = ws.Range("B" & lastRow & ":H" & lastRow)
+
+    frameBottom.Borders(xlEdgeBottom).LineStyle = xlContinuous
+    frameBottom.Borders(xlEdgeBottom).Color = RGB(0, 112, 192)
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
