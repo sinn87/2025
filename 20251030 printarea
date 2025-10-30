@@ -1,0 +1,42 @@
+Sub ExtendPrintAreaAndCopyFormat()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' ← 改成你的工作表名
+
+    Dim lastRow As Long
+    Dim printAreaRange As Range
+    Dim printAreaAddress As String
+    Dim printLastRow As Long
+    Dim printLastCol As Long
+
+    ' 找出 B 列的最后一行（即数据的最下行）
+    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row
+
+    ' 当前打印区域
+    If ws.PageSetup.PrintArea = "" Then Exit Sub ' 没设置就不处理
+    Set printAreaRange = ws.Range(ws.PageSetup.PrintArea)
+    printAreaAddress = ws.PageSetup.PrintArea
+
+    ' 打印区域的最后行和最后列
+    printLastRow = printAreaRange.Rows(printAreaRange.Rows.Count).Row
+    printLastCol = printAreaRange.Columns(printAreaRange.Columns.Count).Column
+
+    ' 如果 B 列的最后一行比打印区域更靠下，就扩大打印区域
+    If lastRow > printLastRow Then
+        ' 扩大打印区域到新的行
+        ws.PageSetup.PrintArea = ws.Range(printAreaRange.Cells(1, 1), ws.Cells(lastRow, printLastCol)).Address
+
+        ' 复制 B22:H22 的格式到新追加的行
+        Dim fmtRange As Range
+        Set fmtRange = ws.Range("B22:H22")
+
+        Dim newRows As Long
+        newRows = lastRow - printLastRow
+
+        Dim copyTarget As Range
+        Set copyTarget = ws.Range("B" & (printLastRow + 1) & ":H" & lastRow)
+
+        fmtRange.Copy
+        copyTarget.PasteSpecial Paste:=xlPasteFormats
+        Application.CutCopyMode = False
+    End If
+End Sub
