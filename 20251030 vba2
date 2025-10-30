@@ -1,0 +1,93 @@
+Sub GenerateCaseSheets()
+    Dim wsSrc As Worksheet, wsTemplate As Worksheet
+    Dim wsNew As Worksheet
+    Dim arr As Variant
+    Dim startRow As Long
+    Dim maxRowsPerPage As Long
+    Dim currentRow As Long
+    Dim totalRows As Long
+    Dim i As Long
+    Dim pageCount As Long
+    Dim currentPage As Long
+    Dim usedRows As Long
+    Dim nextRow As Long
+    Dim sheetNameBase As String
+    
+    ' === 基本设置 ===
+    Set wsSrc = ThisWorkbook.Sheets("数据源")
+    Set wsTemplate = ThisWorkbook.Sheets("模板")
+    sheetNameBase = wsTemplate.Name
+    
+    ' 普通案件或特殊案件起始行
+    If wsSrc.Range("B21").Value <> "" Then
+        startRow = 21 ' 特殊案件
+    Else
+        startRow = 20 ' 普通案件
+    End If
+    
+    ' 蓝框能容纳的行数（例如10行）
+    maxRowsPerPage = 10
+    
+    ' 获取数据区域
+    totalRows = wsSrc.Cells(wsSrc.Rows.Count, "B").End(xlUp).Row - startRow + 1
+    arr = wsSrc.Range("B" & startRow & ":K" & (startRow + totalRows - 1)).Value
+    
+    ' === 计算总行数（含注释） ===
+    Dim logicalRows As Long
+    logicalRows = 0
+    For i = 1 To UBound(arr, 1)
+        logicalRows = logicalRows + 1
+        ' 如果有注释（假设注释在第10列）
+        If arr(i, 10) <> "" Then
+            logicalRows = logicalRows + 1 ' 注释多占一行
+        End If
+    Next i
+    
+    ' 计算页数
+    pageCount = Application.Ceiling(logicalRows / maxRowsPerPage, 1)
+    
+    ' === 创建附加页 ===
+    For i = 2 To pageCount
+        wsTemplate.Copy After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count)
+        ActiveSheet.Name = sheetNameBase & (i - 1)
+    Next i
+    
+    ' === 写入数据 ===
+    currentPage = 1
+    usedRows = 0
+    Set wsNew = wsTemplate
+    nextRow = 1 ' 蓝框内起始行的相对行号（假设从第20行开始填）
+    Dim startY As Long
+    startY = 20
+    
+    For i = 1 To UBound(arr, 1)
+        Dim caseRowHeight As Long
+        caseRowHeight = 1
+        If arr(i, 10) <> "" Then caseRowHeight = 2 ' 含注释
+        
+        ' 如果本页放不下
+        If usedRows + caseRowHeight > maxRowsPerPage Then
+            currentPage = currentPage + 1
+            Set wsNew = ThisWorkbook.Sheets(sheetNameBase & (currentPage - 1))
+            usedRows = 0
+            nextRow = startY
+        End If
+        
+        ' 填入数据
+        wsNew.Range("B" & nextRow & ":K" & nextRow).Value = Application.Index(arr, i)
+        usedRows = usedRows + 1
+        nextRow = nextRow + 1
+        
+        ' 若有注释，单独占一行
+        If arr(i, 10) <> "" Then
+            wsNew.Range("B" & nextRow & ":K" & nextRow).Merge
+            wsNew.Range("B" & nextRow).Value = arr(i, 10)
+            wsNew.Range("B" & nextRow).HorizontalAlignment = xlCenter
+            wsNew.Range("B" & nextRow).VerticalAlignment = xlCenter
+            usedRows = usedRows + 1
+            nextRow = nextRow + 1
+        End If
+    Next i
+    
+    MsgBox "数据生成完成，共 " & pageCount & " 页。", vbInformation
+End Sub
