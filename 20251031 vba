@@ -1,0 +1,156 @@
+Sub ExtendBottomPageBreak()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' 替换为你的工作表
+
+    Dim lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row ' B列最后一行
+
+    ' 如果有横向分页符
+    If ws.HPageBreaks.Count > 0 Then
+        Dim lastHBreak As HPageBreak
+        Set lastHBreak = ws.HPageBreaks(ws.HPageBreaks.Count)
+        
+        ' 判断是否需要移动分页符
+        If lastRow > lastHBreak.Location.Row Then
+            ' 将分页符下移到 B 列最后一行
+            lastHBreak.Location = ws.Rows(lastRow + 1)
+        End If
+    End If
+End Sub
+
+一个通用函数 ApplyRowFormat，可以直接给任意行设置你想要的格式（全边框、居中、字体），并且自动跳过合并单元格，无闪烁。
+Sub ApplyRowFormat(ws As Worksheet, tgtRow As Long)
+    Dim rng As Range
+    Set rng = ws.Range("B" & tgtRow & ":H" & tgtRow)
+
+    ' 如果该行含有合并单元格，则跳过
+    If rng.MergeCells Then Exit Sub
+
+    With rng
+        ' === 全边框 ===
+        With .Borders
+            .LineStyle = xlContinuous
+            .Weight = xlThin
+        End With
+
+        ' === 内边框 ===
+        .Borders(xlInsideHorizontal).LineStyle = xlContinuous
+        .Borders(xlInsideVertical).LineStyle = xlContinuous
+
+        ' === 对齐 ===
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+
+        ' === 字体 ===
+        .Font.Name = "ＭＳ Ｐゴシック"
+        .Font.Size = 10
+        .Font.Bold = False
+
+        ' === 背景色（可选） ===
+        ' .Interior.Color = RGB(242, 242, 242)
+    End With
+End Sub
+
+
+
+啊，这个是 Excel **后台进程没退出** 的典型问题，尤其你用 VB.NET 或 VBA 调用了 Excel 宏之后。
+
+### 原因
+
+1. 你用 `CreateObject("Excel.Application")` 或 `New Excel.Application` 启动了 **隐藏的 Excel 实例**。
+2. VBA 宏里即便 `ThisWorkbook.Close` 或 `Application.Quit`，如果：
+
+   * 对 `Workbook`、`Worksheet` 或 `Range` 的对象变量还没 `Set Nothing`
+   * 或者 VB.NET 侧引用还在
+     → Excel 进程就不会真正退出。
+
+---
+
+### 解决办法
+
+#### 1️⃣ VBA 宏里退出前释放对象
+
+```vba
+Sub MyMacro()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets(1)
+
+    ' ... 你的操作
+
+    ' 清理对象
+    Set ws = Nothing
+
+    ' 保存并关闭工作簿
+    ThisWorkbook.Close SaveChanges:=True
+End Sub
+```
+
+> 重点：**所有 Workbook/Worksheet/Range 对象都要 Set Nothing**。
+
+---
+
+#### 2️⃣ VB.NET 启动 Excel 后正确释放
+
+```vbnet
+Dim xlApp As Object = CreateObject("Excel.Application")
+Dim wb As Object = xlApp.Workbooks.Open("C:\path\to\file.xlsm")
+
+' 调用宏
+xlApp.Run("MyMacro")
+
+' 关闭工作簿
+wb.Close(SaveChanges:=True)
+System.Runtime.InteropServices.Marshal.ReleaseComObject(wb)
+wb = Nothing
+
+' 退出 Excel
+xlApp.Quit()
+System.Runtime.InteropServices.Marshal.ReleaseComObject(xlApp)
+xlApp = Nothing
+
+' 强制垃圾回收
+GC.Collect()
+GC.WaitForPendingFinalizers()
+```
+
+> 如果不 ReleaseComObject 或没 `Nothing`，Excel 进程会残留在任务管理器里。
+
+---
+
+#### 3️⃣ 小技巧
+
+* 不要在 VB.NET 或 VBA 里 **使用多级 With/直接嵌套引用**，比如：
+
+```vbnet
+xlApp.Workbooks(1).Sheets(1).Range("A1").Value = 123
+```
+
+会产生隐藏 COM 对象。
+
+* 改成：
+
+```vbnet
+Dim wb As Object = xlApp.Workbooks(1)
+Dim ws As Object = wb.Sheets(1)
+ws.Range("A1").Value = 123
+```
+
+然后全部 `Set ws = Nothing` / `Set wb = Nothing`。
+
+---
+
+💡 总结：
+
+* **VBA 宏里**：释放对象、关闭工作簿
+* **VB.NET**：Quit + ReleaseComObject + GC
+* 避免嵌套引用产生隐藏 COM 对象
+
+---
+
+如果你愿意，我可以帮你写一个 **VB.NET 启动 XLTm、调用宏、确保退出 Excel 的模板代码**，保证宏运行完后 Excel 进程不会残留。
+
+你希望我帮你写吗？
+
+
+
+
