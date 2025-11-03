@@ -1,0 +1,24 @@
+Public Sub WriteLog(ByVal rows As Variant)
+
+    Dim f As Integer
+    f = FreeFile
+
+    Dim logPath As String
+    logPath = ThisWorkbook.Path & "\case_check_log.txt"
+
+    Open logPath For Append As #f
+
+    Dim r As Long, c As Long
+    For r = LBound(rows) To UBound(rows)
+        Dim line As String
+
+        ' 一行有几个列就 Join 成一个字符串
+        line = Join(rows(r), vbTab)   ' 用Tab分隔
+
+        Print #f, line
+    Next r
+
+    Close #f
+
+End Sub
+20
