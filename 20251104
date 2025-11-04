@@ -1,0 +1,33 @@
+' CaseDataModel.vb
+
+Public Class CaseDataModel
+    Public Property A As String
+    Public Property B As String
+    Public Property C As String
+    Public Property D As String
+
+    Public Function IsAIn(ignore As IEnumerable(Of String)) As Boolean
+        Return ignore.Contains(Me.A)
+    End Function
+End Class
+
+Public Class CaseDataCollection
+    Private _items As New List(Of CaseDataModel)
+
+    Public Sub Add(item As CaseDataModel)
+        _items.Add(item)
+    End Sub
+
+    Public ReadOnly Property Items As List(Of CaseDataModel)
+        Get
+            Return _items
+        End Get
+    End Property
+
+    Public Function FilterBWhereANotIn(ignore As IEnumerable(Of String)) As List(Of String)
+        Return _items _
+            .Where(Function(x) Not x.IsAIn(ignore)) _
+            .Select(Function(x) x.B) _
+            .ToList()
+    End Function
+End Class
