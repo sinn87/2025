@@ -1,0 +1,30 @@
+Private Function CalcPageCount(ByVal data As Variant, ByVal rowsPerPage As Long) As Long
+    If IsEmpty(data) Then CalcPageCount = 0: Exit Function
+
+    Dim i As Long
+    Dim pages As Long
+    Dim used As Long
+    Dim need As Long
+
+    pages = 1
+    used = 0
+
+    For i = LBound(data, 1) To UBound(data, 1)
+
+        ' ★ この案件が何行を消費するか(注釈があれば +1 行)
+        need = 1
+        If Trim(data(i, 8)) <> "" Then need = need + 1
+
+        ' ★ 今のページに入れない場合 → 次のページを追加
+        If used + need > rowsPerPage Then
+            pages = pages + 1
+            used = 0
+        End If
+
+        ' ★ 今ページの使用行数を加算
+        used = used + need
+    Next i
+
+    ' ★ 総ページ数を返す
+    CalcPageCount = pages
+End Function
